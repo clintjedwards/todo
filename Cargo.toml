@@ -1,0 +1,25 @@
+[package]
+authors = ["Clint J Edwards <clint.j.edwards@gmail.com>"]
+edition = "2018"
+name = "todo"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# command line formatting and implementation
+clap = "2.33.3"
+# web service
+tokio = {version = "0.2", features = ["full"]}
+warp = "0.2.5"
+# logging
+slog = "2.5.2"
+slog-async = "2.5.0"
+slog-scope = "4.3.0"
+slog-term = "2.6.0"
+# env vars & json
+serde = {version = "1.0.116", features = ["derive"]}
+# key-value store
+sled = "0.34.4"
+# config/env vars
+envy = "0.4.1"
