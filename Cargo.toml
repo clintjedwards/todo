@@ -10,8 +10,8 @@ version = "0.1.0"
 # command line formatting and implementation
 clap = "2.33.3"
 # web service
-tokio = {version = "0.2", features = ["full"]}
-warp = "0.2.5"
+async-std = {version = "1.6.5", features = ["attributes"]}
+tide = "0.13.0"
 # logging
 slog = "2.5.2"
 slog-async = "2.5.0"
@@ -23,3 +23,5 @@ serde = {version = "1.0.116", features = ["derive"]}
 sled = "0.34.4"
 # config/env vars
 envy = "0.4.1"
+# error handling
+anyhow = "1.0"

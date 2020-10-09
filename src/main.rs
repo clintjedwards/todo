@@ -4,18 +4,19 @@ use slog::o;
 use slog::Drain;
 use slog_scope::info;
 use std::error::Error;
-use std::net::SocketAddr;
-use warp::Filter;
+// use std::net::SocketAddr;
+use tide;
 
 mod config;
 mod storage;
 
-fn main() -> Result<(), Box<(dyn Error)>> {
+#[async_std::main]
+async fn main() -> Result<(), Box<(dyn Error)>> {
     let _guard = init_logging();
 
     let subcommand_add = SubCommand::with_name("add")
         .about("Add an item to the todo list.")
-        .arg(Arg::with_name("description").required(true).index(1));
+        .arg(Arg::with_name("title").required(true).index(1));
 
     let subcommand_update = SubCommand::with_name("update")
         .about("Alter an already existing todo item.")
@@ -41,10 +42,10 @@ fn main() -> Result<(), Box<(dyn Error)>> {
     let matches = app.get_matches();
 
     if let Some(sub_matcher) = matches.subcommand_matches("add") {
-        let description = sub_matcher.value_of("description").unwrap();
+        let title = sub_matcher.value_of("title").unwrap();
     }
 
-    if let Some(sub_matcher) = matches.subcommand_matches("updarte") {
+    if let Some(sub_matcher) = matches.subcommand_matches("update") {
         let id = sub_matcher.value_of("id").unwrap();
     }
 
@@ -54,7 +55,7 @@ fn main() -> Result<(), Box<(dyn Error)>> {
 
     if let Some(sub_matcher) = matches.subcommand_matches("server") {
         let address = sub_matcher.value_of("address").unwrap();
-        run_server(address)
+        run_server(address).await?;
     }
 
     return Ok(());
@@ -71,21 +72,20 @@ fn init_logging() -> slog_scope::GlobalLoggerGuard {
     guard
 }
 
-#[tokio::main]
-async fn run_server(address: &str) {
+async fn run_server(address: &str) -> Result<(), std::io::Error> {
     let config = config::get_config();
     let config = match config {
         Ok(config) => config,
         Err(error) => panic!("Error reading environment variable: {}", error),
     };
 
-    let _ = storage::init_database(&config.database_path);
+    let _ = storage::Storage::new(&config.database_path);
     info!("initialized database"; "path" => &config.database_path);
 
-    // Match any request and return hello world!
-    let routes = warp::any().map(|| "Hello, World!");
-    let socket_address: SocketAddr = address.parse().expect("Unable to parse socket address");
-
+    let mut webserver = tide::new();
+    webserver.at("/").get(|_| async { Ok("Hello, world!") });
     info!("started http server"; "address" => address);
-    warp::serve(routes).run(socket_address).await;
+
+    webserver.listen("127.0.0.1:8080").await?;
+    Ok(())
 }
