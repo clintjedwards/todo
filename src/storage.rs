@@ -1,8 +1,8 @@
 use super::models::{Item, Items};
 use anyhow::{Context, Result};
-use serial_test::serial;
 use sled;
 
+#[derive(Debug, Clone)]
 pub struct Storage {
     db: sled::Db,
 }
@@ -50,7 +50,7 @@ impl Storage {
     }
 
     // add_item adds a single item
-    pub fn add_item(&self, id: &str, item: Item) -> Result<()> {
+    pub fn add_item(&self, id: &str, item: &Item) -> Result<()> {
         let raw_item: Vec<u8> = bincode::serialize(&item)
             .with_context(|| format!("Failed to encode item object {}", id))?;
 
@@ -78,6 +78,7 @@ impl Storage {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
     #[serial]
@@ -91,7 +92,7 @@ mod tests {
 
         let expected_item = test_item.clone();
 
-        db.add_item("1", test_item).unwrap();
+        db.add_item("1", &test_item).unwrap();
         let items = db.get_all_items().unwrap();
         let mut expected_map = std::collections::HashMap::new();
         expected_map.insert(id, expected_item);
@@ -115,12 +116,4 @@ mod tests {
         let item = db.get_item("1").unwrap().unwrap();
         assert_eq!(item, expected_item)
     }
-
-    //     #[test]
-    //     fn test_add_item() {
-    //         let db = Storage::new("/tmp/test.db");
-    //         db.add_item("1", "some title").unwrap();
-    //         let item = db.get_item("1").unwrap();
-    //         dbg!(item.unwrap());
-    //     }
 }

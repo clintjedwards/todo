@@ -2,24 +2,38 @@ use super::super::models::Item;
 use super::config;
 use super::storage;
 use tide::prelude::*;
-use tide::{Request, Result};
+use tide::{Request, Response, Result, StatusCode};
 
-struct API {
-    db: storage::Storage,
-    config: config::Config,
+#[derive(Debug, Clone)]
+pub struct API {
+    pub db: storage::Storage,
+    pub config: config::Config,
 }
 
-impl API {
-    // pub async fn get_all_items_handler(&self, req: Request<()>) -> Result<()> {
-    //     let items = self.db.get_all_items()?;
-    // }
-    // pub async fn add_item_handler(req: Request<()>) -> Result<()> {
-    //     Item::new(id_length, title)
-    //     Ok(())
-    // }
+pub async fn get_all_items_handler(req: Request<API>) -> Result {
+    let items = req.state().db.get_all_items()?;
+    let response = Response::builder(StatusCode::Ok).body(json!(items)).build();
+    Ok(response)
+}
 
-    // pub async fn greet(req: Request<()>) -> Result<String> {
-    //     let name = req.param("id").unwrap_or("world".to_owned());
-    //     Ok(format!("Hello, {}!", name))
-    // }
+pub async fn add_item_handler(mut req: Request<API>) -> Result {
+    #[derive(Deserialize, Clone)]
+    struct AddItemRequest {
+        parent: Option<String>,
+        title: String,
+        description: Option<String>,
+    };
+    let add_item_request: AddItemRequest = req.body_json().await?;
+
+    let mut new_item = Item::new(req.state().config.id_length, &add_item_request.title);
+    new_item.title = add_item_request.title;
+    new_item.description = add_item_request.description;
+    new_item.parent = add_item_request.parent;
+
+    req.state().db.add_item(&new_item.id, &new_item)?;
+
+    let response = Response::builder(StatusCode::Created)
+        .body(json!(new_item))
+        .build();
+    Ok(response)
 }

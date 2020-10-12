@@ -31,7 +31,7 @@ fn generate_id(length: usize) -> String {
     id
 }
 
-#[derive(Debug, Default, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Default, Eq, PartialEq)]
 pub struct Items {
     pub items: HashMap<String, Item>,
 }

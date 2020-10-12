@@ -5,6 +5,7 @@ use tide;
 
 mod handlers;
 
+//TODO(clintjedwards): can run server just be the constructor method for API?
 pub async fn run_server(address: &str) -> Result<(), std::io::Error> {
     let config = config::get_config();
     let config = match config {
@@ -12,13 +13,15 @@ pub async fn run_server(address: &str) -> Result<(), std::io::Error> {
         Err(error) => panic!("Error reading environment variable: {}", error),
     };
 
-    let _ = storage::Storage::new(&config.database_path);
+    let db = storage::Storage::new(&config.database_path);
     info!("initialized database"; "path" => &config.database_path);
 
-    let mut webserver = tide::new();
-    webserver.at("/").get(|_| async { Ok("Hello, world!") });
+    let test = handlers::API { db, config };
+
+    let mut webserver = tide::with_state(test);
+    webserver.at("/").get(handlers::get_all_items_handler);
+    webserver.at("/").post(handlers::add_item_handler);
     webserver.at("/:id").get(|_| async { Ok("Hello, world!") });
-    webserver.at("/:id").post(|_| async { Ok("Hello, world!") });
     webserver.at("/:id").put(|_| async { Ok("Hello, world!") });
     webserver
         .at("/:id")
