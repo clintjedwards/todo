@@ -61,8 +61,8 @@ impl Storage {
         Ok(())
     }
 
-    // remove_item deletes a single item
-    pub fn remove_item(&self, id: &str) -> Result<()> {
+    // delete_item deletes a single item
+    pub fn delete_item(&self, id: &str) -> Result<()> {
         self.db
             .remove(id)
             .with_context(|| format!("Failed to remove item {}", id))?;

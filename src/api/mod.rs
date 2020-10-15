@@ -21,11 +21,9 @@ pub async fn run_server(address: &str) -> Result<(), std::io::Error> {
     let mut webserver = tide::with_state(test);
     webserver.at("/").get(handlers::get_all_items_handler);
     webserver.at("/").post(handlers::add_item_handler);
-    webserver.at("/:id").get(|_| async { Ok("Hello, world!") });
+    webserver.at("/:id").get(handlers::get_item_handler);
     webserver.at("/:id").put(|_| async { Ok("Hello, world!") });
-    webserver
-        .at("/:id")
-        .delete(|_| async { Ok("Hello, world!") });
+    webserver.at("/:id").delete(handlers::delete_item_handler);
 
     info!("started http server"; "address" => address);
 

@@ -37,3 +37,23 @@ pub async fn add_item_handler(mut req: Request<API>) -> Result {
         .build();
     Ok(response)
 }
+
+//TODO(clintjedwards):Error handle 404s and make sure erorrs are properly
+//handled
+pub async fn get_item_handler(req: Request<API>) -> Result {
+    let id: String = req.param("id")?;
+
+    let item = req.state().db.get_item(&id)?;
+
+    let response = Response::builder(StatusCode::Ok).body(json!(item)).build();
+    Ok(response)
+}
+
+pub async fn delete_item_handler(req: Request<API>) -> Result {
+    let id: String = req.param("id")?;
+
+    req.state().db.delete_item(&id)?;
+
+    let response = Response::builder(StatusCode::Ok).build();
+    Ok(response)
+}
