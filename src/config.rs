@@ -14,9 +14,23 @@ fn default_id_length() -> usize {
 }
 
 fn default_database_path() -> String {
-    String::from("/tmp/test.db")
+    String::from("/tmp/todo_dev.db")
 }
 
 pub fn get_config() -> Result<Config, envy::Error> {
     envy::from_env::<Config>()
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct CLIConfig {
+    #[serde(default = "default_host")]
+    pub host: String,
+}
+
+fn default_host() -> String {
+    String::from("http://localhost:8080")
+}
+
+pub fn get_cli_config() -> Result<CLIConfig, envy::Error> {
+    envy::from_env::<CLIConfig>()
 }

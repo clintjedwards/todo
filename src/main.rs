@@ -5,6 +5,7 @@ use slog::Drain;
 use std::error::Error;
 
 mod api;
+mod cli;
 mod config;
 mod models;
 mod storage;
@@ -12,6 +13,7 @@ mod storage;
 #[async_std::main]
 async fn main() -> Result<(), Box<(dyn Error)>> {
     let _guard = init_logging();
+    let cli = cli::new();
 
     let subcommand_add = SubCommand::with_name("add")
         .about("Add an item to the todo list.")
@@ -25,6 +27,8 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         .about("Remove an item from the todo list.")
         .arg(Arg::with_name("id").required(true).index(1));
 
+    let subcommand_list = SubCommand::with_name("list").about("List all outstanding todo items.");
+
     let subcommand_server = SubCommand::with_name("server")
         .about("Start Todo web service.")
         .arg(Arg::with_name("address").required(true).index(1));
@@ -36,6 +40,7 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         .subcommand(subcommand_add)
         .subcommand(subcommand_update)
         .subcommand(subcommand_remove)
+        .subcommand(subcommand_list)
         .subcommand(subcommand_server);
 
     let matches = app.get_matches();
@@ -53,9 +58,14 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         let id = sub_matcher.value_of("id").unwrap();
     }
 
+    if let Some(_) = matches.subcommand_matches("list") {
+        cli.list_todos();
+    }
+
     if let Some(sub_matcher) = matches.subcommand_matches("server") {
         let address = sub_matcher.value_of("address").unwrap();
-        api::run_server(address).await?;
+        let api = api::new();
+        api.run_server(address).await?;
     }
 
     return Ok(());

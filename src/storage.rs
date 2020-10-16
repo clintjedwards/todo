@@ -7,13 +7,13 @@ pub struct Storage {
     db: sled::Db,
 }
 
-impl Storage {
-    pub fn new(path: &str) -> Storage {
-        Storage {
-            db: sled::open(path).expect("open"),
-        }
+pub fn new(path: &str) -> Storage {
+    Storage {
+        db: sled::open(path).expect("open"),
     }
+}
 
+impl Storage {
     // get_all_items returns a unpaginated hashmap of all todo items
     pub fn get_all_items(&self) -> Result<Items> {
         let items_iter = self.db.iter();
@@ -83,7 +83,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_get_all_items() {
-        let db = Storage::new("/tmp/test.db");
+        let db = new("/tmp/test.db");
         let mut test_item: Item = Default::default();
         let id = String::from("1");
         test_item.id = id.clone();
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_get_item() {
-        let db = Storage::new("/tmp/test.db");
+        let db = new("/tmp/test.db");
 
         let mut expected_item: Item = Default::default();
         expected_item.id = String::from("1");
