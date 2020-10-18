@@ -35,3 +35,5 @@ rand = "0.7.3"
 reqwest = { version = "0.10", features = ["blocking", "json"] }
 # cli tree printer
 ptree = "0.3.0"
+# testing globals
+lazy_static = "1.4.0"

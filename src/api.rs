@@ -56,15 +56,18 @@ async fn add_item_handler(mut req: Request<API>) -> tide::Result {
     };
     let add_item_request: AddItemRequest = req.body_json().await?;
 
+    //TODO(clintjedwards): Put this in a transaction
+
     let mut new_item = models::new_item(req.state().config.id_length, &add_item_request.title);
     new_item.title = add_item_request.title;
     new_item.description = add_item_request.description;
     new_item.parent = add_item_request.parent;
 
-    req.state().db.add_item(&new_item.id, &new_item)?;
+    let committed_item = new_item.clone();
+    req.state().db.add_item(new_item)?;
 
     let response = Response::builder(StatusCode::Created)
-        .body(json!(new_item))
+        .body(json!(committed_item))
         .build();
     Ok(response)
 }

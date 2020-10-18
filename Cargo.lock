@@ -2331,6 +2331,7 @@ dependencies = [
  "bincode",
  "clap",
  "envy",
+ "lazy_static 1.4.0",
  "ptree",
  "rand",
  "reqwest",

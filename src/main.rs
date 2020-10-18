@@ -10,6 +10,8 @@ mod config;
 mod models;
 mod storage;
 
+//TODO(clintjedwards): Do proper error checking everywhere
+
 #[async_std::main]
 async fn main() -> Result<(), Box<(dyn Error)>> {
     let _guard = init_logging();
@@ -17,7 +19,22 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
 
     let subcommand_add = SubCommand::with_name("add")
         .about("Add an item to the todo list.")
-        .arg(Arg::with_name("title").required(true).index(1));
+        .arg(Arg::with_name("title").required(true).index(1))
+        .arg(
+            Arg::with_name("description")
+                .short("d")
+                .long("description")
+                .help("Give further color about what this todo item might be about.")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("parent")
+                .short("p")
+                .long("parent")
+                .help("Which todo item (by id) should this be a child of.")
+                .takes_value(true)
+                .value_name("id"),
+        );
 
     let subcommand_update = SubCommand::with_name("update")
         .about("Alter an already existing todo item.")
@@ -45,9 +62,19 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
 
     let matches = app.get_matches();
 
-    // It's okay to unwrap value_of calls since they are required and should not cause panics
     if let Some(sub_matcher) = matches.subcommand_matches("add") {
-        let title = sub_matcher.value_of("title").unwrap();
+        let mut new_item: models::Item = Default::default();
+
+        // It's okay to unwrap required value_of calls since they cannot be none
+        new_item.title = sub_matcher.value_of("title").unwrap().to_string();
+        if let Some(parent) = sub_matcher.value_of("parent") {
+            new_item.parent = Some(parent.to_string());
+        }
+        if let Some(description) = sub_matcher.value_of("description") {
+            new_item.description = Some(description.to_string());
+        }
+
+        cli.add_todo(new_item)?;
     }
 
     if let Some(sub_matcher) = matches.subcommand_matches("update") {
@@ -59,7 +86,7 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
     }
 
     if let Some(_) = matches.subcommand_matches("list") {
-        cli.list_todos();
+        cli.list_todos()?;
     }
 
     if let Some(sub_matcher) = matches.subcommand_matches("server") {
