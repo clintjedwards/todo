@@ -136,7 +136,7 @@ impl Storage {
                 None => vec![],
             };
 
-            let (added_children, removed_children) =
+            let (removed_children, added_children) =
                 find_list_updates(&old_list_children, &new_list_children);
 
             for child_id in added_children {
@@ -205,8 +205,8 @@ impl Storage {
 // Adds a parent to an already existing child
 fn link_parent_to_child(
     db: &sled::transaction::TransactionalTree,
-    parent_id: &str,
     child_id: &str,
+    parent_id: &str,
 ) -> Result<()> {
     let raw_child = db.get(child_id)?.unwrap();
     let mut child: Item = bincode::deserialize(&raw_child.to_vec())?;
@@ -242,6 +242,9 @@ fn link_child_to_parent(
 
     match parent.children.clone() {
         Some(mut children) => {
+            if children.contains(&child_id.clone().to_string()) {
+                return Ok(());
+            }
             children.push(child_id.clone().to_string());
             parent.children = Some(children);
         }
@@ -305,6 +308,9 @@ fn unlink_parent_from_child(
     let raw_child = db.get(&child_id)?.unwrap();
     let mut child: Item = bincode::deserialize(&raw_child.to_vec())?;
 
+    if child.parent.is_some() {
+        unlink_child_from_parent(db, &child.id.clone(), &child.parent.unwrap().clone())?;
+    }
     child.parent = None;
     child.modified = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -473,6 +479,7 @@ mod tests {
             Some("test description 2".to_string()),
             returned_item.description
         );
+        DB.clear();
     }
 
     #[test]
@@ -503,6 +510,7 @@ mod tests {
         let returned_parent_children = returned_parent.children.unwrap();
 
         assert!(returned_parent_children.contains(&"child".to_string()));
+        DB.clear();
     }
 
     #[test]
@@ -534,10 +542,87 @@ mod tests {
         let returned_parent_children = returned_parent.children.unwrap();
 
         assert!(!returned_parent_children.contains(&"child".to_string()));
+        DB.clear();
     }
 
-    fn update_item_with_removed_child() {}
-    fn update_item_with_added_child() {}
+    #[test]
+    #[serial]
+    // make sure that when you remove a child from an item that child's parent
+    // field is none.
+    fn update_item_with_removed_child() {
+        let mut parent_item: Item = Default::default();
+        parent_item.id = "parent".to_string();
+        parent_item.title = "test title 1".to_string();
+        parent_item.description = Some("test description 1".to_string());
+        parent_item.children = Some(vec_of_strings!("child", "hello"));
+
+        DB.add_item(parent_item).unwrap();
+
+        let mut child_item: Item = Default::default();
+        child_item.id = "child".to_string();
+        child_item.title = "test title 1".to_string();
+        child_item.description = Some("test description 1".to_string());
+
+        DB.add_item(child_item).unwrap();
+
+        let mut hello_item: Item = Default::default();
+        hello_item.id = "hello".to_string();
+        hello_item.title = "test title 1".to_string();
+        hello_item.description = Some("test description 1".to_string());
+
+        DB.add_item(hello_item).unwrap();
+
+        let mut updated_parent_item = DB.get_item(&"parent".to_string()).unwrap().unwrap();
+        updated_parent_item.children = Some(vec_of_strings!("hello"));
+
+        DB.update_item(&updated_parent_item.id.clone(), updated_parent_item)
+            .unwrap();
+
+        let child = DB.get_item(&"child".to_string()).unwrap().unwrap();
+        assert!(child.parent.is_none());
+
+        DB.clear();
+    }
+
+    #[test]
+    #[serial]
+    // make sure that when you add a child that child get updated with its new parent
+    // any current parent should be updated so it doesn't own the child anymore.
+    fn update_item_with_added_child() {
+        let mut parent_item: Item = Default::default();
+        parent_item.id = "parent".to_string();
+        parent_item.title = "test title 1".to_string();
+        parent_item.description = Some("test description 1".to_string());
+        parent_item.children = Some(vec_of_strings!("child"));
+
+        DB.add_item(parent_item).unwrap();
+
+        let mut child_item: Item = Default::default();
+        child_item.id = "child".to_string();
+        child_item.title = "test title 1".to_string();
+        child_item.description = Some("test description 1".to_string());
+
+        DB.add_item(child_item).unwrap();
+
+        let mut hello_item: Item = Default::default();
+        hello_item.id = "hello".to_string();
+        hello_item.title = "test title 1".to_string();
+        hello_item.description = Some("test description 1".to_string());
+
+        DB.add_item(hello_item).unwrap();
+
+        let mut updated_parent_item = DB.get_item(&"parent".to_string()).unwrap().unwrap();
+        updated_parent_item.children = Some(vec_of_strings!("child", "hello"));
+
+        DB.update_item(&updated_parent_item.id.clone(), updated_parent_item)
+            .unwrap();
+
+        let child = DB.get_item(&"hello".to_string()).unwrap().unwrap();
+        assert!(child.parent.is_some());
+        assert_eq!(&child.parent.unwrap(), &"parent".to_string());
+
+        DB.clear();
+    }
 
     #[test]
     #[serial]
