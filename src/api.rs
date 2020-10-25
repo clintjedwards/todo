@@ -31,7 +31,7 @@ impl API {
         webserver.at("/").get(get_all_items_handler);
         webserver.at("/").post(add_item_handler);
         webserver.at("/:id").get(get_item_handler);
-        webserver.at("/:id").put(|_| async { Ok("Hello, world!") });
+        webserver.at("/:id").put(update_item_handler);
         webserver.at("/:id").delete(delete_item_handler);
 
         info!("started http server"; "address" => address);
@@ -56,8 +56,6 @@ async fn add_item_handler(mut req: Request<API>) -> tide::Result {
     };
     let add_item_request: AddItemRequest = req.body_json().await?;
 
-    //TODO(clintjedwards): Put this in a transaction
-
     let mut new_item = models::new_item(req.state().config.id_length, &add_item_request.title);
     new_item.title = add_item_request.title;
     new_item.description = add_item_request.description;
@@ -72,15 +70,54 @@ async fn add_item_handler(mut req: Request<API>) -> tide::Result {
     Ok(response)
 }
 
-//TODO(clintjedwards):Error handle 404s and make sure erorrs are properly
-//handled
+async fn update_item_handler(mut req: Request<API>) -> tide::Result {
+    let id: String = req.param("id")?;
+
+    #[derive(Deserialize, Clone)]
+    struct UpdateItemRequest {
+        parent: Option<String>,
+        children: Option<Vec<String>>,
+        title: String,
+        description: Option<String>,
+    };
+    let update_item_request: UpdateItemRequest = req.body_json().await?;
+
+    let updated_item = req.state().db.get_item(&id)?;
+    let mut updated_item = match updated_item {
+        Some(updated_item) => updated_item,
+        None => {
+            let response = Response::builder(StatusCode::NotFound).build();
+            return Ok(response);
+        }
+    };
+    updated_item.title = update_item_request.title;
+    updated_item.description = update_item_request.description;
+    updated_item.parent = update_item_request.parent;
+    updated_item.children = update_item_request.children;
+
+    let committed_item = updated_item.clone();
+    req.state().db.update_item(updated_item)?;
+
+    let response = Response::builder(StatusCode::Created)
+        .body(json!(committed_item))
+        .build();
+    Ok(response)
+}
+
 async fn get_item_handler(req: Request<API>) -> tide::Result {
     let id: String = req.param("id")?;
 
     let item = req.state().db.get_item(&id)?;
-
-    let response = Response::builder(StatusCode::Ok).body(json!(item)).build();
-    Ok(response)
+    match item {
+        Some(item) => {
+            let response = Response::builder(StatusCode::Ok).body(json!(item)).build();
+            return Ok(response);
+        }
+        None => {
+            let response = Response::builder(StatusCode::NotFound).build();
+            return Ok(response);
+        }
+    }
 }
 
 async fn delete_item_handler(req: Request<API>) -> tide::Result {
