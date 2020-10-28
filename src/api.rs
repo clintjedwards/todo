@@ -1,7 +1,7 @@
 use super::config;
 use super::models;
 use super::storage;
-use slog_scope::info;
+use slog_scope::{error, info};
 use tide;
 use tide::prelude::*;
 use tide::{Request, Response, StatusCode};
@@ -62,7 +62,16 @@ async fn add_item_handler(mut req: Request<API>) -> tide::Result {
     new_item.parent = add_item_request.parent;
 
     let committed_item = new_item.clone();
-    req.state().db.add_item(new_item)?;
+    match req.state().db.add_item(new_item) {
+        Ok(_) => {}
+        Err(e) => {
+            let response = Response::builder(StatusCode::InternalServerError)
+                .body(json!({ "failed to add item": format!("{}", e) }))
+                .build();
+            error!("could not add item"; "err" => format!("{}", e));
+            return Ok(response);
+        }
+    }
 
     let response = Response::builder(StatusCode::Created)
         .body(json!(committed_item))
@@ -95,7 +104,16 @@ async fn update_item_handler(mut req: Request<API>) -> tide::Result {
     updated_item.children = update_item_request.children;
 
     let committed_item = updated_item.clone();
-    req.state().db.update_item(updated_item)?;
+    match req.state().db.update_item(updated_item) {
+        Ok(_) => {}
+        Err(e) => {
+            let response = Response::builder(StatusCode::InternalServerError)
+                .body(json!({ "err": format!("{}", e) }))
+                .build();
+            error!("could not update item"; "id" => committed_item.id.clone(), "error" => format!("{}", e));
+            return Ok(response);
+        }
+    }
 
     let response = Response::builder(StatusCode::Created)
         .body(json!(committed_item))

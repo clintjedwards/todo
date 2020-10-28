@@ -70,6 +70,10 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
                 .value_name("comma delimited ids"),
         );
 
+    let subcommand_get = SubCommand::with_name("get")
+        .about("Get an item by id.")
+        .arg(Arg::with_name("id").required(true).index(1));
+
     let subcommand_remove = SubCommand::with_name("remove")
         .about("Remove an item from the todo list.")
         .arg(Arg::with_name("id").required(true).index(1));
@@ -88,6 +92,7 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         .subcommand(subcommand_update)
         .subcommand(subcommand_remove)
         .subcommand(subcommand_list)
+        .subcommand(subcommand_get)
         .subcommand(subcommand_server);
 
     let matches = app.get_matches();
@@ -136,6 +141,11 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
 
     if let Some(_) = matches.subcommand_matches("list") {
         cli.list_todos()?;
+    }
+
+    if let Some(sub_matcher) = matches.subcommand_matches("get") {
+        let id = sub_matcher.value_of("id").unwrap();
+        cli.get_todo(id)?;
     }
 
     if let Some(sub_matcher) = matches.subcommand_matches("server") {

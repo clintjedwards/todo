@@ -50,11 +50,13 @@ impl CLI {
 
     pub fn get_todo(&self, id: &str) -> Result<()> {
         let get_endpoint = format!("{}/{}", self.host.clone(), id);
-        let item = reqwest::blocking::get(&get_endpoint)?
-            .json::<Item>()
-            .unwrap();
+        let response = reqwest::blocking::get(&get_endpoint)?;
+        if response.status().is_client_error() {
+            return Err(anyhow!("could not find item {}", id));
+        }
 
-        print!("{}", item.pretty_print());
+        let item = response.json::<Item>().unwrap();
+        println!("{}", item.pretty_print());
 
         Ok(())
     }

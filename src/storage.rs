@@ -245,7 +245,13 @@ fn link_child_to_parent(
     }
 
     let parent_id = parent_id.unwrap();
-    let raw_parent = db.get(&parent_id)?.unwrap();
+    let raw_parent_option = db.get(&parent_id)?;
+    let raw_parent = match raw_parent_option {
+        Some(parent) => parent,
+        None => {
+            return Err(anyhow!("could not find parent id {}", &parent_id));
+        }
+    };
     let mut parent: Item = bincode::deserialize(&raw_parent.to_vec())?;
 
     match parent.children.clone() {
