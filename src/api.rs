@@ -73,14 +73,7 @@ async fn add_item_handler(mut req: Request<API>) -> tide::Result {
 async fn update_item_handler(mut req: Request<API>) -> tide::Result {
     let id: String = req.param("id")?;
 
-    #[derive(Deserialize, Clone)]
-    struct UpdateItemRequest {
-        parent: Option<String>,
-        children: Option<Vec<String>>,
-        title: String,
-        description: Option<String>,
-    };
-    let update_item_request: UpdateItemRequest = req.body_json().await?;
+    let update_item_request: models::UpdateItemRequest = req.body_json().await?;
 
     let updated_item = req.state().db.get_item(&id)?;
     let mut updated_item = match updated_item {
@@ -90,7 +83,13 @@ async fn update_item_handler(mut req: Request<API>) -> tide::Result {
             return Ok(response);
         }
     };
-    updated_item.title = update_item_request.title;
+
+    if let Some(title) = update_item_request.title {
+        updated_item.title = title;
+    } else {
+        updated_item.title = "".to_string();
+    }
+
     updated_item.description = update_item_request.description;
     updated_item.parent = update_item_request.parent;
     updated_item.children = update_item_request.children;

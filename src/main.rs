@@ -38,7 +38,37 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
 
     let subcommand_update = SubCommand::with_name("update")
         .about("Alter an already existing todo item.")
-        .arg(Arg::with_name("id").required(true).index(1));
+        .arg(Arg::with_name("id").required(true).index(1))
+        .arg(
+            Arg::with_name("title")
+                .short("t")
+                .long("title")
+                .help("The title for the todo item.")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("description")
+                .short("d")
+                .long("description")
+                .help("Give further color about what this todo item might be about.")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("parent")
+                .short("p")
+                .long("parent")
+                .help("Which todo item (by id) should this be a child of.")
+                .takes_value(true)
+                .value_name("id"),
+        )
+        .arg(
+            Arg::with_name("children")
+                .short("c")
+                .long("children")
+                .help("Which todo items (by id) should this be a parent of. Comma delimited.")
+                .takes_value(true)
+                .value_name("comma delimited ids"),
+        );
 
     let subcommand_remove = SubCommand::with_name("remove")
         .about("Remove an item from the todo list.")
@@ -51,7 +81,7 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         .arg(Arg::with_name("address").required(true).index(1));
 
     let app = App::new("Todo")
-        .about("A simple todo list application")
+        .about("A simple todo application")
         .version(crate_version!())
         .setting(AppSettings::SubcommandRequired)
         .subcommand(subcommand_add)
@@ -79,6 +109,24 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
 
     if let Some(sub_matcher) = matches.subcommand_matches("update") {
         let id = sub_matcher.value_of("id").unwrap();
+        let title = sub_matcher.value_of("title");
+        let description = sub_matcher.value_of("description");
+        let parent = sub_matcher.value_of("parent");
+        let children_option = sub_matcher.values_of("children");
+        let children = match children_option {
+            Some(children_iter) => Some(children_iter.map(str::to_string).collect()),
+            None => None,
+        };
+
+        let updated_item = models::UpdateItemRequest {
+            id: id.to_string(),
+            title: title.map(str::to_string),
+            description: description.map(str::to_string),
+            parent: parent.map(str::to_string),
+            children,
+        };
+
+        cli.update_todo(updated_item)?;
     }
 
     if let Some(sub_matcher) = matches.subcommand_matches("remove") {

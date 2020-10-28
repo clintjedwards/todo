@@ -1,6 +1,6 @@
 use super::config;
-use super::models::{Item, Items};
-use anyhow::Result;
+use super::models::{Item, Items, UpdateItemRequest};
+use anyhow::{anyhow, Result};
 use ptree;
 use reqwest;
 use std::collections::{HashMap, HashSet};
@@ -8,6 +8,9 @@ use std::collections::{HashMap, HashSet};
 pub struct CLI {
     host: String,
 }
+
+//TODO(clintjedwards): Handle errors for all of this
+//TODO(clintjedwards): prevent title from being an empty string
 
 pub fn new() -> CLI {
     let config = config::get_cli_config();
@@ -41,6 +44,51 @@ impl CLI {
         let add_endpoint = self.host.clone();
         let client = reqwest::blocking::Client::new();
         client.post(&add_endpoint).json(&item).send()?;
+
+        Ok(())
+    }
+
+    pub fn get_todo(&self, id: &str) -> Result<()> {
+        let get_endpoint = format!("{}/{}", self.host.clone(), id);
+        let item = reqwest::blocking::get(&get_endpoint)?
+            .json::<Item>()
+            .unwrap();
+
+        print!("{}", item.pretty_print());
+
+        Ok(())
+    }
+
+    pub fn update_todo(&self, item: UpdateItemRequest) -> Result<()> {
+        let get_endpoint = format!("{}/{}", self.host.clone(), item.id.clone());
+        let response = reqwest::blocking::get(&get_endpoint)?;
+        if response.status().is_client_error() {
+            return Err(anyhow!("could not find item {}", item.id.clone()));
+        }
+
+        let old_item = response.json::<Item>().unwrap();
+
+        // Only replace the things that have changed
+        let mut updated_item = old_item.clone();
+        if let Some(title) = item.title {
+            updated_item.title = title;
+        }
+
+        if let Some(parent) = item.parent {
+            updated_item.parent = Some(parent);
+        }
+
+        if let Some(children) = item.children {
+            updated_item.children = Some(children);
+        }
+
+        if let Some(description) = item.description {
+            updated_item.description = Some(description);
+        }
+
+        let update_endpoint = format!("{}/{}", self.host.clone(), item.id.clone());
+        let client = reqwest::blocking::Client::new();
+        client.put(&update_endpoint).json(&updated_item).send()?;
 
         Ok(())
     }

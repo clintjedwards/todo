@@ -34,12 +34,27 @@ pub fn new_item(id_length: usize, title: &str) -> Item {
 impl Item {
     // prints an item in the following format:
     // [someid] My precious title here :: some extended definition here
+    // TODO(clintjedwards): this should probably be renamed to "format"
     pub fn pretty_print(&self) -> String {
         match &self.description {
             None => format!("[{}] {}", self.id, self.title),
             Some(description) => format!("[{}] {} :: {}", self.id, self.title, description),
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+pub struct UpdateItemRequest {
+    pub id: String,
+    pub parent: Option<String>,
+    pub children: Option<Vec<String>>,
+    pub title: Option<String>,
+    pub description: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default, Eq, PartialEq)]
+pub struct Items {
+    pub items: HashMap<String, Item>,
 }
 
 fn generate_id(length: usize) -> String {
@@ -49,9 +64,4 @@ fn generate_id(length: usize) -> String {
         .collect();
 
     id
-}
-
-#[derive(Debug, Serialize, Deserialize, Default, Eq, PartialEq)]
-pub struct Items {
-    pub items: HashMap<String, Item>,
 }
