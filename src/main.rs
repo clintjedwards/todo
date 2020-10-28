@@ -83,6 +83,7 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
 
     if let Some(sub_matcher) = matches.subcommand_matches("remove") {
         let id = sub_matcher.value_of("id").unwrap();
+        cli.remove_todo(id)?;
     }
 
     if let Some(_) = matches.subcommand_matches("list") {

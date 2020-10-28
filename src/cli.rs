@@ -44,6 +44,14 @@ impl CLI {
 
         Ok(())
     }
+
+    pub fn remove_todo(&self, id: &str) -> Result<()> {
+        let remove_endpoint = format!("{}/{}", self.host.clone(), id);
+        let client = reqwest::blocking::Client::new();
+        client.delete(&remove_endpoint).send()?;
+
+        Ok(())
+    }
 }
 
 struct TreeBuilder<'a> {

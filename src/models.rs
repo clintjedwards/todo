@@ -32,7 +32,8 @@ pub fn new_item(id_length: usize, title: &str) -> Item {
 }
 
 impl Item {
-    // [abc123] My precious title here :: some extended definition here
+    // prints an item in the following format:
+    // [someid] My precious title here :: some extended definition here
     pub fn pretty_print(&self) -> String {
         match &self.description {
             None => format!("[{}] {}", self.id, self.title),

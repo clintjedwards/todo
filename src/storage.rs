@@ -13,6 +13,7 @@ pub struct Storage {
     db: sled::Db,
 }
 
+// new returns a new Storage struct with sled db backing or fails
 pub fn new(path: &str) -> Storage {
     Storage {
         db: sled::open(path).expect("could not open sled database"),
@@ -91,6 +92,12 @@ impl Storage {
         }
     }
 
+    // update_item takes the newer version of an item and replaces the old version with it
+    // update_item also does intelligent things like detect changes in parent or children
+    // properties and updates the correct dependencies to reflect the correct state.
+    //
+    // For example: updating an item with a new set of children will diff the previous version
+    // and visit all child node and update their parent to the correct thing.
     pub fn update_item(&self, item: Item) -> Result<()> {
         let transaction_result = self.db.transaction(|tx_db| {
             let raw_old_item = tx_db.get(&item.id.clone())?.unwrap();
