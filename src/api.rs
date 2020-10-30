@@ -36,7 +36,7 @@ impl API {
 
         info!("started http server"; "address" => address);
 
-        webserver.listen("127.0.0.1:8080").await?;
+        webserver.listen(address).await?;
         Ok(())
     }
 }
@@ -102,6 +102,7 @@ async fn update_item_handler(mut req: Request<API>) -> tide::Result {
     updated_item.description = update_item_request.description;
     updated_item.parent = update_item_request.parent;
     updated_item.children = update_item_request.children;
+    updated_item.completed = update_item_request.completed;
 
     let committed_item = updated_item.clone();
     match req.state().db.update_item(updated_item) {

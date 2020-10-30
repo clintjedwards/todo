@@ -11,6 +11,7 @@ pub struct Item {
     pub children: Option<Vec<String>>,
     pub title: String,
     pub description: Option<String>,
+    pub completed: bool,
     pub added: u64,    // Epoch date when item was created.
     pub modified: u64, // Epoch date when item was last edited.
 }
@@ -19,6 +20,7 @@ pub fn new_item(id_length: usize, title: &str) -> Item {
     let mut new_item: Item = Default::default();
     new_item.id = generate_id(id_length);
     new_item.title = String::from(title);
+    new_item.completed = false;
     new_item.added = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
@@ -35,7 +37,7 @@ impl Item {
     // prints an item in the following format:
     // [someid] My precious title here :: some extended definition here
     // TODO(clintjedwards): this should probably be renamed to "format"
-    pub fn pretty_print(&self) -> String {
+    pub fn format(&self) -> String {
         match &self.description {
             None => format!("[{}] {}", self.id, self.title),
             Some(description) => format!("[{}] {} :: {}", self.id, self.title, description),
@@ -50,6 +52,7 @@ pub struct UpdateItemRequest {
     pub children: Option<Vec<String>>,
     pub title: Option<String>,
     pub description: Option<String>,
+    pub completed: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Eq, PartialEq)]

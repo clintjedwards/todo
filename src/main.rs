@@ -24,40 +24,40 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
             Arg::with_name("description")
                 .short("d")
                 .long("description")
-                .help("Give further color about what this todo item might be about.")
+                .help("Give further color about what this todo item might be about")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("parent")
                 .short("p")
                 .long("parent")
-                .help("Which todo item (by id) should this be a child of.")
+                .help("Which todo item (by id) should this be a child of")
                 .takes_value(true)
                 .value_name("id"),
         );
 
     let subcommand_update = SubCommand::with_name("update")
-        .about("Alter an already existing todo item.")
+        .about("Alter an already existing todo item")
         .arg(Arg::with_name("id").required(true).index(1))
         .arg(
             Arg::with_name("title")
                 .short("t")
                 .long("title")
-                .help("The title for the todo item.")
+                .help("The title for the todo item")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("description")
                 .short("d")
                 .long("description")
-                .help("Give further color about what this todo item might be about.")
+                .help("Give further color about what this todo item might be about")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("parent")
                 .short("p")
                 .long("parent")
-                .help("Which todo item (by id) should this be a child of.")
+                .help("Which todo item (by id) should this be a child of")
                 .takes_value(true)
                 .value_name("id"),
         )
@@ -65,23 +65,27 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
             Arg::with_name("children")
                 .short("c")
                 .long("children")
-                .help("Which todo items (by id) should this be a parent of. Comma delimited.")
+                .help("Which todo items (by id) should this be a parent of; Comma delimited")
                 .takes_value(true)
                 .value_name("comma delimited ids"),
         );
 
     let subcommand_get = SubCommand::with_name("get")
-        .about("Get an item by id.")
+        .about("Get an item by id")
         .arg(Arg::with_name("id").required(true).index(1));
 
     let subcommand_remove = SubCommand::with_name("remove")
-        .about("Remove an item from the todo list.")
+        .about("Remove an item from the todo list")
         .arg(Arg::with_name("id").required(true).index(1));
 
-    let subcommand_list = SubCommand::with_name("list").about("List all outstanding todo items.");
+    let subcommand_complete = SubCommand::with_name("complete")
+        .about("Complete or uncomplete a task")
+        .arg(Arg::with_name("id").required(true).index(1));
+
+    let subcommand_list = SubCommand::with_name("list").about("List all outstanding todo items");
 
     let subcommand_server = SubCommand::with_name("server")
-        .about("Start Todo web service.")
+        .about("Start Todo web service")
         .arg(Arg::with_name("address").required(true).index(1));
 
     let app = App::new("Todo")
@@ -93,6 +97,7 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         .subcommand(subcommand_remove)
         .subcommand(subcommand_list)
         .subcommand(subcommand_get)
+        .subcommand(subcommand_complete)
         .subcommand(subcommand_server);
 
     let matches = app.get_matches();
@@ -128,6 +133,7 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
             title: title.map(str::to_string),
             description: description.map(str::to_string),
             parent: parent.map(str::to_string),
+            completed: false,
             children,
         };
 
@@ -146,6 +152,11 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
     if let Some(sub_matcher) = matches.subcommand_matches("get") {
         let id = sub_matcher.value_of("id").unwrap();
         cli.get_todo(id)?;
+    }
+
+    if let Some(sub_matcher) = matches.subcommand_matches("complete") {
+        let id = sub_matcher.value_of("id").unwrap();
+        cli.complete_todo(id)?;
     }
 
     if let Some(sub_matcher) = matches.subcommand_matches("server") {

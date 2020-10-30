@@ -56,7 +56,31 @@ impl CLI {
         }
 
         let item = response.json::<Item>().unwrap();
-        println!("{}", item.pretty_print());
+        println!("{}", item.format());
+
+        Ok(())
+    }
+
+    // complete_todo toggles the completion parameter
+    pub fn complete_todo(&self, id: &str) -> Result<()> {
+        let get_endpoint = format!("{}/{}", self.host.clone(), id);
+        let response = reqwest::blocking::get(&get_endpoint)?;
+        if response.status().is_client_error() {
+            return Err(anyhow!("could not find item {}", id));
+        }
+
+        let old_item = response.json::<Item>().unwrap();
+
+        let mut updated_item = old_item.clone();
+        if updated_item.completed {
+            updated_item.completed = false;
+        } else {
+            updated_item.completed = true;
+        }
+
+        let update_endpoint = format!("{}/{}", self.host.clone(), id);
+        let client = reqwest::blocking::Client::new();
+        client.put(&update_endpoint).json(&updated_item).send()?;
 
         Ok(())
     }
@@ -136,7 +160,7 @@ impl<'a> TreeBuilder<'a> {
         if self.visited.contains(&item.id.clone()) {
             return;
         }
-        self.tree.begin_child(item.pretty_print());
+        self.tree.begin_child(item.format());
 
         self.visited.insert(item.id.clone());
 
