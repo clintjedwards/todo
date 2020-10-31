@@ -169,10 +169,7 @@ impl Storage {
             let mut item = item.clone();
             item.id = old_item.id.clone();
             item.added = old_item.added.clone();
-            item.modified = SystemTime::now()
-                .duration_since(SystemTime::UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
+            item.modified = get_current_epoch_time();
 
             let raw_item: Vec<u8> = match bincode::serialize(&item) {
                 Ok(raw_item) => raw_item,
@@ -220,10 +217,7 @@ fn link_parent_to_child(
     let mut child: Item = bincode::deserialize(&raw_child.to_vec())?;
 
     child.parent = Some(parent_id.clone().to_string());
-    child.modified = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    child.modified = get_current_epoch_time();
 
     let raw_child: Vec<u8> = bincode::serialize(&child)
         .with_context(|| format!("Failed to encode item {}", child_id))?;
@@ -267,10 +261,7 @@ fn link_child_to_parent(
         }
     }
 
-    parent.modified = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    parent.modified = get_current_epoch_time();
 
     let raw_parent: Vec<u8> = bincode::serialize(&parent)
         .with_context(|| format!("Failed to encode item {}", parent_id))?;
@@ -299,10 +290,7 @@ fn unlink_child_from_parent(
         None => return Ok(()),
     }
 
-    parent.modified = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    parent.modified = get_current_epoch_time();
 
     let raw_parent: Vec<u8> = bincode::serialize(&parent)
         .with_context(|| format!("Failed to encode item {}", parent_id))?;
@@ -326,10 +314,7 @@ fn unlink_parent_from_child(
         unlink_child_from_parent(db, &child.id.clone(), &child.parent.unwrap().clone())?;
     }
     child.parent = None;
-    child.modified = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    child.modified = get_current_epoch_time();
 
     let raw_child: Vec<u8> = bincode::serialize(&child)
         .with_context(|| format!("Failed to encode item {}", child_id))?;
@@ -353,6 +338,13 @@ fn find_list_updates(old_list: &Vec<String>, new_list: &Vec<String>) -> (Vec<Str
     let removals = find_list_difference(old_list, new_list);
     let additions = find_list_difference(new_list, old_list);
     return (removals, additions);
+}
+
+fn get_current_epoch_time() -> u64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
 }
 
 #[cfg(test)]

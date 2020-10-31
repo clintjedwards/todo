@@ -58,7 +58,7 @@ impl CLI {
         }
 
         let item = response.json::<Item>().unwrap();
-        println!("{}", item.format_colorized());
+        println!("{}", item.short_format());
 
         Ok(())
     }
@@ -87,40 +87,10 @@ impl CLI {
         Ok(())
     }
 
-    pub fn update_todo(&self, item: UpdateItemRequest) -> Result<()> {
-        let get_endpoint = format!("{}/{}", self.host.clone(), item.id.clone());
-        let response = reqwest::blocking::get(&get_endpoint)?;
-        if response.status().is_client_error() {
-            return Err(anyhow!("could not find item {}", item.id.clone()));
-        }
-
-        let old_item = response.json::<Item>().unwrap();
-
-        // Only replace the things that have changed
-        let mut updated_item = old_item.clone();
-        if let Some(title) = item.title {
-            updated_item.title = title;
-        }
-
-        if let Some(parent) = item.parent {
-            updated_item.parent = Some(parent);
-        }
-
-        if let Some(children) = item.children {
-            updated_item.children = Some(children);
-        }
-
-        if let Some(description) = item.description {
-            updated_item.description = Some(description);
-        }
-
-        if let Some(link) = item.link {
-            updated_item.link = Some(link);
-        }
-
-        let update_endpoint = format!("{}/{}", self.host.clone(), item.id.clone());
+    pub fn update_todo(&self, id: &str, item: UpdateItemRequest) -> Result<()> {
+        let update_endpoint = format!("{}/{}", self.host.clone(), id);
         let client = reqwest::blocking::Client::new();
-        client.put(&update_endpoint).json(&updated_item).send()?;
+        client.put(&update_endpoint).json(&item).send()?;
 
         Ok(())
     }
@@ -173,7 +143,7 @@ impl<'a> TreeBuilder<'a> {
         if self.visited.contains(&item.id.clone()) {
             return;
         }
-        self.tree.begin_child(item.format_colorized());
+        self.tree.begin_child(item.short_format());
 
         self.visited.insert(item.id.clone());
 

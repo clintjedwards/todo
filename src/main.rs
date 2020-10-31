@@ -1,8 +1,8 @@
+use anyhow::{anyhow, Result};
 use clap::crate_version;
 use clap::{App, AppSettings, Arg, SubCommand};
 use slog::o;
 use slog::Drain;
-use std::error::Error;
 
 mod api;
 mod cli;
@@ -13,7 +13,7 @@ mod storage;
 //TODO(clintjedwards): Do proper error checking everywhere
 
 #[async_std::main]
-async fn main() -> Result<(), Box<(dyn Error)>> {
+async fn main() -> Result<()> {
     let _guard = init_logging();
     let cli = cli::new();
 
@@ -82,6 +82,12 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
                 .long("link")
                 .help("URL to 3rd party application link or similar")
                 .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("completed")
+                .long("completed")
+                .help("Mark a todo item as done")
+                .takes_value(true),
         );
 
     let subcommand_get = SubCommand::with_name("get")
@@ -110,7 +116,10 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         .arg(Arg::with_name("address").required(true).index(1));
 
     let app = App::new("Todo")
-        .about("A simple todo application")
+        .about(
+            "A simple todo application\n\n
+Use `NO_COLOR=true` to turn off terminal coloring.",
+        )
         .version(crate_version!())
         .setting(AppSettings::SubcommandRequired)
         .subcommand(subcommand_add)
@@ -147,6 +156,22 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         let description = sub_matcher.value_of("description");
         let parent = sub_matcher.value_of("parent");
         let link = sub_matcher.value_of("link");
+        let completed_option = sub_matcher.value_of("completed");
+        let completed = match completed_option {
+            Some(c) => {
+                let result = c.parse::<bool>();
+                let result = match result {
+                    Ok(boolean) => boolean,
+                    Err(e) => {
+                        eprintln!("expected boolean; found {}", &c);
+                        return Err(anyhow!(e));
+                    }
+                };
+                Some(result)
+            }
+            None => None,
+        };
+
         let children_option = sub_matcher.values_of("children");
         let children = match children_option {
             Some(children_iter) => Some(children_iter.map(str::to_string).collect()),
@@ -154,16 +179,15 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         };
 
         let updated_item = models::UpdateItemRequest {
-            id: id.to_string(),
             title: title.map(str::to_string),
             description: description.map(str::to_string),
             parent: parent.map(str::to_string),
             link: link.map(str::to_string),
-            completed: false,
+            completed,
             children,
         };
 
-        cli.update_todo(updated_item)?;
+        cli.update_todo(id, updated_item)?;
     }
 
     if let Some(sub_matcher) = matches.subcommand_matches("remove") {

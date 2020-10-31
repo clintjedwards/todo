@@ -52,14 +52,7 @@ async fn get_all_items_handler(req: Request<API>) -> tide::Result {
 }
 
 async fn add_item_handler(mut req: Request<API>) -> tide::Result {
-    #[derive(Deserialize, Clone)]
-    struct AddItemRequest {
-        parent: Option<String>,
-        title: String,
-        link: Option<String>,
-        description: Option<String>,
-    };
-    let add_item_request: AddItemRequest = req.body_json().await?;
+    let add_item_request: models::AddItemRequest = req.body_json().await?;
 
     let mut new_item = models::new_item(req.state().config.id_length, &add_item_request.title);
     new_item.title = add_item_request.title;
@@ -100,17 +93,26 @@ async fn update_item_handler(mut req: Request<API>) -> tide::Result {
         }
     };
 
+    //TODO(clintjedwards): find a solution for long if some let chains like this
+    // Update only fields that have changed
     if let Some(title) = update_item_request.title {
         updated_item.title = title;
-    } else {
-        updated_item.title = "".to_string();
     }
-
-    updated_item.link = update_item_request.link;
-    updated_item.description = update_item_request.description;
-    updated_item.parent = update_item_request.parent;
-    updated_item.children = update_item_request.children;
-    updated_item.completed = update_item_request.completed;
+    if let Some(completed) = update_item_request.completed {
+        updated_item.completed = completed;
+    }
+    if let Some(link) = update_item_request.link {
+        updated_item.link = Some(link);
+    }
+    if let Some(description) = update_item_request.description {
+        updated_item.description = Some(description);
+    }
+    if let Some(parent) = update_item_request.parent {
+        updated_item.parent = Some(parent);
+    }
+    if let Some(children) = update_item_request.children {
+        updated_item.children = Some(children);
+    }
 
     let committed_item = updated_item.clone();
     match req.state().db.update_item(updated_item) {

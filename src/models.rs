@@ -7,39 +7,33 @@ use std::time::SystemTime;
 
 #[derive(Serialize, Deserialize, Debug, Default, Eq, PartialEq, Clone)]
 pub struct Item {
-    pub id: String,
-    pub parent: Option<String>,
-    pub children: Option<Vec<String>>,
-    pub title: String,
-    pub description: Option<String>,
-    pub link: Option<String>,
+    pub added: u64,                    // Epoch date when item was created.
+    pub children: Option<Vec<String>>, // List of children by ids.
     pub completed: bool,
-    pub added: u64,    // Epoch date when item was created.
+    pub description: Option<String>,
+    pub id: String,
+    pub link: Option<String>,
     pub modified: u64, // Epoch date when item was last edited.
+    pub parent: Option<String>,
+    pub title: String,
 }
 
 pub fn new_item(id_length: usize, title: &str) -> Item {
     let mut new_item: Item = Default::default();
-    new_item.id = generate_id(id_length);
-    new_item.title = String::from(title);
+    new_item.added = get_current_epoch_time();
     new_item.completed = false;
-    new_item.added = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    new_item.modified = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    new_item.id = generate_id(id_length);
+    new_item.modified = get_current_epoch_time();
+    new_item.title = String::from(title);
 
     new_item
 }
 
 impl Item {
-    // prints an item in the following format:
-    // [someid] My precious title here :: some extended definition here
-    // TODO(clintjedwards): this should probably be renamed to "format"
-    pub fn format_colorized(&self) -> String {
+    // format prints an item in the following format:
+    // [id] <title> :: <link>
+    //          <description>
+    pub fn short_format(&self) -> String {
         let mut string_builder = vec![];
 
         string_builder.push(format!("[{}]", self.id.blue()));
@@ -61,22 +55,33 @@ impl Item {
 
         string_builder.concat()
     }
-}
 
-#[derive(Serialize, Deserialize, Clone, Default)]
-pub struct UpdateItemRequest {
-    pub id: String,
-    pub parent: Option<String>,
-    pub children: Option<Vec<String>>,
-    pub title: Option<String>,
-    pub description: Option<String>,
-    pub link: Option<String>,
-    pub completed: bool,
+    pub fn long_format(&self) -> String {
+        "".to_string()
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Eq, PartialEq)]
 pub struct Items {
     pub items: HashMap<String, Item>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+pub struct AddItemRequest {
+    pub description: Option<String>,
+    pub link: Option<String>,
+    pub parent: Option<String>,
+    pub title: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default)]
+pub struct UpdateItemRequest {
+    pub description: Option<String>,
+    pub children: Option<Vec<String>>,
+    pub completed: Option<bool>,
+    pub link: Option<String>,
+    pub parent: Option<String>,
+    pub title: Option<String>,
 }
 
 fn generate_id(length: usize) -> String {
@@ -86,4 +91,11 @@ fn generate_id(length: usize) -> String {
         .collect();
 
     id
+}
+
+fn get_current_epoch_time() -> u64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
 }
