@@ -34,6 +34,13 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
                 .help("Which todo item (by id) should this be a child of")
                 .takes_value(true)
                 .value_name("id"),
+        )
+        .arg(
+            Arg::with_name("link")
+                .short("l")
+                .long("link")
+                .help("URL to 3rd party application where todo might be tracked")
+                .takes_value(true),
         );
 
     let subcommand_update = SubCommand::with_name("update")
@@ -68,6 +75,13 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
                 .help("Which todo items (by id) should this be a parent of; Comma delimited")
                 .takes_value(true)
                 .value_name("comma delimited ids"),
+        )
+        .arg(
+            Arg::with_name("link")
+                .short("l")
+                .long("link")
+                .help("URL to 3rd party application link or similar")
+                .takes_value(true),
         );
 
     let subcommand_get = SubCommand::with_name("get")
@@ -82,7 +96,14 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         .about("Complete or uncomplete a task")
         .arg(Arg::with_name("id").required(true).index(1));
 
-    let subcommand_list = SubCommand::with_name("list").about("List all outstanding todo items");
+    let subcommand_list = SubCommand::with_name("list")
+        .about("List all outstanding todo items")
+        .arg(
+            Arg::with_name("show_completed")
+                .short("s")
+                .long("show_completed")
+                .help("Show items which have been completed already"),
+        );
 
     let subcommand_server = SubCommand::with_name("server")
         .about("Start Todo web service")
@@ -113,6 +134,9 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         if let Some(description) = sub_matcher.value_of("description") {
             new_item.description = Some(description.to_string());
         }
+        if let Some(link) = sub_matcher.value_of("link") {
+            new_item.link = Some(link.to_string());
+        }
 
         cli.add_todo(new_item)?;
     }
@@ -122,6 +146,7 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         let title = sub_matcher.value_of("title");
         let description = sub_matcher.value_of("description");
         let parent = sub_matcher.value_of("parent");
+        let link = sub_matcher.value_of("link");
         let children_option = sub_matcher.values_of("children");
         let children = match children_option {
             Some(children_iter) => Some(children_iter.map(str::to_string).collect()),
@@ -133,6 +158,7 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
             title: title.map(str::to_string),
             description: description.map(str::to_string),
             parent: parent.map(str::to_string),
+            link: link.map(str::to_string),
             completed: false,
             children,
         };
@@ -145,8 +171,9 @@ async fn main() -> Result<(), Box<(dyn Error)>> {
         cli.remove_todo(id)?;
     }
 
-    if let Some(_) = matches.subcommand_matches("list") {
-        cli.list_todos()?;
+    if let Some(sub_matcher) = matches.subcommand_matches("list") {
+        let show_completed = sub_matcher.is_present("show_completed");
+        cli.list_todos(show_completed)?;
     }
 
     if let Some(sub_matcher) = matches.subcommand_matches("get") {

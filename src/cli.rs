@@ -22,11 +22,13 @@ pub fn new() -> CLI {
 }
 
 impl CLI {
-    pub fn list_todos(&self) -> Result<()> {
+    pub fn list_todos(&self, include_completed: bool) -> Result<()> {
         let list_endpoint = self.host.clone();
         let response = reqwest::blocking::get(&list_endpoint)?
             .json::<Items>()
             .unwrap();
+
+        //TODO(clintjedwards): update this to error handle
 
         let todo_tree = ptree::TreeBuilder::new("Todo List".to_string());
         let mut builder = TreeBuilder {
@@ -35,7 +37,7 @@ impl CLI {
             tree: todo_tree,
         };
 
-        builder.build();
+        builder.build(include_completed);
 
         Ok(())
     }
@@ -56,7 +58,7 @@ impl CLI {
         }
 
         let item = response.json::<Item>().unwrap();
-        println!("{}", item.format());
+        println!("{}", item.format_colorized());
 
         Ok(())
     }
@@ -112,6 +114,10 @@ impl CLI {
             updated_item.description = Some(description);
         }
 
+        if let Some(link) = item.link {
+            updated_item.link = Some(link);
+        }
+
         let update_endpoint = format!("{}/{}", self.host.clone(), item.id.clone());
         let client = reqwest::blocking::Client::new();
         client.put(&update_endpoint).json(&updated_item).send()?;
@@ -142,8 +148,15 @@ struct TreeBuilder<'a> {
 // makes it so that we need to do a depth first search by each orphan node in order
 // to get a proper tree.
 impl<'a> TreeBuilder<'a> {
-    fn build(&mut self) {
+    fn build(&mut self, include_completed: bool) {
+        //TODO(clintjedwards): make this list sortable by different filters
+        //TODO(clintjedwards): auto-sort completed at the end of the list
         for item in self.items_map.values() {
+            if !include_completed {
+                if item.completed {
+                    continue;
+                }
+            }
             match item.parent {
                 None => self.add_to_tree(&item),
                 Some(_) => continue,
@@ -160,7 +173,7 @@ impl<'a> TreeBuilder<'a> {
         if self.visited.contains(&item.id.clone()) {
             return;
         }
-        self.tree.begin_child(item.format());
+        self.tree.begin_child(item.format_colorized());
 
         self.visited.insert(item.id.clone());
 

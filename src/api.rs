@@ -12,6 +12,10 @@ pub struct API {
     config: config::Config,
 }
 
+//TODO:(clintjedwards): Make it easier so that when you add a new field to the modal you don't
+// have to update 'add' and 'update' functions. So that it leads to less bugs. We should be able
+// to enumerate through and auto add them.
+
 pub fn new() -> API {
     let config = config::get_config();
     let config = match config {
@@ -52,12 +56,14 @@ async fn add_item_handler(mut req: Request<API>) -> tide::Result {
     struct AddItemRequest {
         parent: Option<String>,
         title: String,
+        link: Option<String>,
         description: Option<String>,
     };
     let add_item_request: AddItemRequest = req.body_json().await?;
 
     let mut new_item = models::new_item(req.state().config.id_length, &add_item_request.title);
     new_item.title = add_item_request.title;
+    new_item.link = add_item_request.link;
     new_item.description = add_item_request.description;
     new_item.parent = add_item_request.parent;
 
@@ -73,6 +79,7 @@ async fn add_item_handler(mut req: Request<API>) -> tide::Result {
         }
     }
 
+    info!("added item"; "id" => &committed_item.id);
     let response = Response::builder(StatusCode::Created)
         .body(json!(committed_item))
         .build();
@@ -99,6 +106,7 @@ async fn update_item_handler(mut req: Request<API>) -> tide::Result {
         updated_item.title = "".to_string();
     }
 
+    updated_item.link = update_item_request.link;
     updated_item.description = update_item_request.description;
     updated_item.parent = update_item_request.parent;
     updated_item.children = update_item_request.children;
@@ -111,11 +119,12 @@ async fn update_item_handler(mut req: Request<API>) -> tide::Result {
             let response = Response::builder(StatusCode::InternalServerError)
                 .body(json!({ "err": format!("{}", e) }))
                 .build();
-            error!("could not update item"; "id" => committed_item.id.clone(), "error" => format!("{}", e));
+            error!("could not update item"; "id" => &id, "error" => format!("{}", e));
             return Ok(response);
         }
     }
 
+    info!("updated item"; "id" => &id);
     let response = Response::builder(StatusCode::Created)
         .body(json!(committed_item))
         .build();
@@ -143,6 +152,7 @@ async fn delete_item_handler(req: Request<API>) -> tide::Result {
 
     req.state().db.delete_item(&id)?;
 
+    info!("deleted item"; "id" => &id);
     let response = Response::builder(StatusCode::Ok).build();
     Ok(response)
 }

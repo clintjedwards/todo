@@ -1,3 +1,4 @@
+use colored::*;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,7 @@ pub struct Item {
     pub children: Option<Vec<String>>,
     pub title: String,
     pub description: Option<String>,
+    pub link: Option<String>,
     pub completed: bool,
     pub added: u64,    // Epoch date when item was created.
     pub modified: u64, // Epoch date when item was last edited.
@@ -37,11 +39,27 @@ impl Item {
     // prints an item in the following format:
     // [someid] My precious title here :: some extended definition here
     // TODO(clintjedwards): this should probably be renamed to "format"
-    pub fn format(&self) -> String {
-        match &self.description {
-            None => format!("[{}] {}", self.id, self.title),
-            Some(description) => format!("[{}] {} :: {}", self.id, self.title, description),
+    pub fn format_colorized(&self) -> String {
+        let mut string_builder = vec![];
+
+        string_builder.push(format!("[{}]", self.id.blue()));
+        string_builder.push(format!(" {}", self.title));
+
+        match &self.link {
+            Some(link) => string_builder.push(format!(" {} {}", "::".green(), link.yellow())),
+            None => {}
         }
+
+        match &self.description {
+            Some(desc) => string_builder.push(format!(" \n\t      {}", desc)),
+            None => {}
+        }
+
+        if self.completed {
+            return format!("{}", string_builder.concat().dimmed());
+        }
+
+        string_builder.concat()
     }
 }
 
@@ -52,6 +70,7 @@ pub struct UpdateItemRequest {
     pub children: Option<Vec<String>>,
     pub title: Option<String>,
     pub description: Option<String>,
+    pub link: Option<String>,
     pub completed: bool,
 }
 
