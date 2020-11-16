@@ -1,7 +1,6 @@
 use super::config;
 use super::models;
 use super::storage;
-use config::get;
 use slog_scope::{error, info};
 use tide;
 use tide::prelude::*;
@@ -19,7 +18,7 @@ pub struct API {
 // to enumerate through and auto add them.
 
 pub fn new() -> API {
-    let config = get();
+    let config = config::get();
     let config = match config {
         Ok(config) => config,
         Err(error) => panic!("Error reading environment variable: {}", error),
@@ -47,12 +46,21 @@ impl API {
     }
 }
 
+// get_all_items_handler retrieves an unpaginated list of all todo items.
 async fn get_all_items_handler(req: Request<API>) -> tide::Result {
-    let items = req.state().db.get_all_items()?;
+    let items = match req.state().db.get_all_items() {
+        Ok(items) => items,
+        Err(error) => {
+            error!("could not get items"; "err" => format!("{}", error));
+            let response = Response::builder(StatusCode::InternalServerError).build();
+            return Ok(response);
+        }
+    };
     let response = Response::builder(StatusCode::Ok).body(json!(items)).build();
     Ok(response)
 }
 
+// add_item_handler stores a single todo item.
 async fn add_item_handler(mut req: Request<API>) -> tide::Result {
     let add_item_request: models::AddItemRequest = req.body_json().await?;
 
@@ -81,6 +89,8 @@ async fn add_item_handler(mut req: Request<API>) -> tide::Result {
     Ok(response)
 }
 
+// update_item_handler determines which fields have been updated and updates the
+// stored item.
 async fn update_item_handler(mut req: Request<API>) -> tide::Result {
     let id: String = req.param("id")?;
 
@@ -96,6 +106,7 @@ async fn update_item_handler(mut req: Request<API>) -> tide::Result {
     };
 
     //TODO(clintjedwards): find a solution for long if some let chains like this
+
     // Update only fields that have changed
     if let Some(title) = update_item_request.title {
         updated_item.title = title;
@@ -135,10 +146,20 @@ async fn update_item_handler(mut req: Request<API>) -> tide::Result {
     Ok(response)
 }
 
+// get_item_handler returns a single item by id.
 async fn get_item_handler(req: Request<API>) -> tide::Result {
     let id: String = req.param("id")?;
 
-    let item = req.state().db.get_item(&id)?;
+    let item = match req.state().db.get_item(&id) {
+        Ok(item) => item,
+        Err(error) => {
+            let response = Response::builder(StatusCode::InternalServerError)
+                .body(json!({ "err": format!("{}", error) }))
+                .build();
+            error!("could not get item"; "id" => &id, "error" => format!("{}", error));
+            return Ok(response);
+        }
+    };
     match item {
         Some(item) => {
             let response = Response::builder(StatusCode::Ok).body(json!(item)).build();
@@ -151,10 +172,19 @@ async fn get_item_handler(req: Request<API>) -> tide::Result {
     }
 }
 
+// delete_item_handler removes a single item by id.
+// Deletion of a non-existant key will result in a successful call.
 async fn delete_item_handler(req: Request<API>) -> tide::Result {
     let id: String = req.param("id")?;
 
-    req.state().db.delete_item(&id)?;
+    match req.state().db.delete_item(&id) {
+        Ok(_) => {}
+        Err(error) => {
+            let response = Response::builder(StatusCode::InternalServerError).build();
+            error!("could not remove item"; "id" => &id, "error" => format!("{}", error));
+            return Ok(response);
+        }
+    };
 
     info!("deleted item"; "id" => &id);
     let response = Response::builder(StatusCode::Ok).build();
