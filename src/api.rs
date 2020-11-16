@@ -1,11 +1,13 @@
 use super::config;
 use super::models;
 use super::storage;
+use config::get;
 use slog_scope::{error, info};
 use tide;
 use tide::prelude::*;
 use tide::{Request, Response, StatusCode};
 
+// API represents a REST API object
 #[derive(Debug, Clone)]
 pub struct API {
     db: storage::Storage,
@@ -17,7 +19,7 @@ pub struct API {
 // to enumerate through and auto add them.
 
 pub fn new() -> API {
-    let config = config::get_config();
+    let config = get();
     let config = match config {
         Ok(config) => config,
         Err(error) => panic!("Error reading environment variable: {}", error),

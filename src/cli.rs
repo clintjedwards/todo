@@ -13,7 +13,7 @@ pub struct CLI {
 //TODO(clintjedwards): prevent title from being an empty string
 
 pub fn new() -> CLI {
-    let config = config::get_cli_config();
+    let config = config::get_cli();
     let config = match config {
         Ok(config) => config,
         Err(error) => panic!("Error reading environment variable: {}", error),
