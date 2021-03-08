@@ -128,7 +128,7 @@ impl<'a> TreeBuilder<'a> {
                 }
             }
             match item.parent {
-                None => self.add_to_tree(&item),
+                None => self.add_to_tree(&item, include_completed),
                 Some(_) => continue,
             }
         }
@@ -139,7 +139,7 @@ impl<'a> TreeBuilder<'a> {
     // takes a given node and adds it to the given TreeBuilder object
     // it then looks at all child nodes and does the same
     // Once it is out of child nodes it returns
-    fn add_to_tree(&mut self, item: &Item) {
+    fn add_to_tree(&mut self, item: &Item, include_completed: bool) {
         if self.visited.contains(&item.id.clone()) {
             return;
         }
@@ -150,7 +150,12 @@ impl<'a> TreeBuilder<'a> {
         if let Some(children) = &item.children {
             for child_id in children {
                 let child = &self.items_map[child_id];
-                self.add_to_tree(&child)
+                if !include_completed {
+                    if child.completed {
+                        continue;
+                    }
+                }
+                self.add_to_tree(&child, include_completed)
             }
         }
         self.tree.end_child();
