@@ -4,6 +4,9 @@ use anyhow::{anyhow, Result};
 use ptree;
 use reqwest;
 use std::collections::{HashMap, HashSet};
+use std::env;
+use tempfile::Builder;
+use which;
 
 pub struct CLI {
     host: String,
@@ -42,7 +45,7 @@ impl CLI {
         Ok(())
     }
 
-    pub fn add_todo(&self, item: Item) -> Result<()> {
+    pub fn add_todo(&self, item: Item, interactive: bool) -> Result<()> {
         let add_endpoint = self.host.clone();
         let client = reqwest::blocking::Client::new();
         client.post(&add_endpoint).json(&item).send()?;
@@ -87,7 +90,7 @@ impl CLI {
         Ok(())
     }
 
-    pub fn update_todo(&self, id: &str, item: UpdateItemRequest) -> Result<()> {
+    pub fn update_todo(&self, id: &str, item: UpdateItemRequest, interactive: bool) -> Result<()> {
         let update_endpoint = format!("{}/{}", self.host.clone(), id);
         let client = reqwest::blocking::Client::new();
         client.put(&update_endpoint).json(&item).send()?;
@@ -161,3 +164,37 @@ impl<'a> TreeBuilder<'a> {
         self.tree.end_child();
     }
 }
+
+// fn create_tmp_file() {
+//     let mut file = Builder::new()
+//         .suffix(".toml")
+//         .rand_bytes(5)
+//         .tempfile()
+//         .expect();
+// }
+
+// fn get_editor_path() -> String {
+//     if let Ok(path) = env::var(SOME_ENV_HERE_VISUAL) {
+//         return path;
+//     }
+
+//     if let Ok(path) = env::var(Some_ENV_vARHERE) {
+//         return path;
+//     }
+
+//     let path = which::which(default_EDITOR).expect("");
+
+//     path.as_path().display().to_string()
+// }
+
+// fn open_editor(filename: &str) {
+//     let path = get_editor_path();
+//     let mut path: Vec<&str> = path.split(char::is_whitespace).collect();
+//     path.push(filename);
+//     let path = path.as_slice();
+
+//     let mut command = Command::new(path[0]);
+//     command.args(&paths[1..]);
+
+//     let output = command.output().expect("");
+// }

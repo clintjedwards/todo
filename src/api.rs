@@ -2,6 +2,7 @@ use super::config;
 use super::models;
 use super::storage;
 use slog_scope::{error, info};
+use std::time::SystemTime;
 use tide;
 use tide::prelude::*;
 use tide::{Request, Response, StatusCode};
@@ -69,6 +70,8 @@ async fn add_item_handler(mut req: Request<API>) -> tide::Result {
     new_item.link = add_item_request.link;
     new_item.description = add_item_request.description;
     new_item.parent = add_item_request.parent;
+    new_item.added = get_current_epoch_time();
+    new_item.modified = get_current_epoch_time();
 
     let committed_item = new_item.clone();
     match req.state().db.add_item(new_item) {
@@ -189,4 +192,11 @@ async fn delete_item_handler(req: Request<API>) -> tide::Result {
     info!("deleted item"; "id" => &id);
     let response = Response::builder(StatusCode::Ok).build();
     Ok(response)
+}
+
+fn get_current_epoch_time() -> u64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs()
 }

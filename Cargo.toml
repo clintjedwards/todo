@@ -7,8 +7,6 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-# command line formatting and implementation
-clap = "2.33.3"
 # web service
 async-std = {version = "1.6.5", features = ["attributes"]}
 tide = "0.13.0"
@@ -21,6 +19,8 @@ slog-term = "2.6.0"
 serde = {version = "1.0.116", features = ["derive"]}
 # key-value store
 sled = "0.34.4"
+# command line formatting and implementation
+structopt = "0.3"
 # config/env vars
 envy = "0.4.1"
 # error handling
@@ -39,4 +39,7 @@ ptree = "0.3.0"
 lazy_static = "1.4.0"
 # terminal coloring
 colored = "2"
+tempfile = "3.2"
+toml = "0.5"
+which = "4.1"
 

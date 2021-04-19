@@ -55,10 +55,6 @@ impl Item {
 
         string_builder.concat()
     }
-
-    pub fn long_format(&self) -> String {
-        "".to_string()
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Default, Eq, PartialEq)]
