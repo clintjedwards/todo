@@ -1,12 +1,19 @@
 use super::config;
-use super::models::{Item, Items, UpdateItemRequest};
+use super::models::{AddItemRequest, Item, Items, UpdateItemRequest};
 use anyhow::{anyhow, Result};
 use ptree;
 use reqwest;
 use std::collections::{HashMap, HashSet};
 use std::env;
+use std::fs;
+use std::io::Write;
+use std::process::Command;
 use tempfile::Builder;
 use which;
+
+const VISUAL_VAR: &'static str = "VISUAL";
+const EDITOR_VAR: &'static str = "EDITOR";
+const DEFAULT_EDITOR: &'static str = "vi";
 
 pub struct CLI {
     host: String,
@@ -31,8 +38,6 @@ impl CLI {
             .json::<Items>()
             .unwrap();
 
-        //TODO(clintjedwards): update this to error handle
-
         let todo_tree = ptree::TreeBuilder::new("Todo List".to_string());
         let mut builder = TreeBuilder {
             items_map: &response.items,
@@ -45,7 +50,31 @@ impl CLI {
         Ok(())
     }
 
-    pub fn add_todo(&self, item: Item, interactive: bool) -> Result<()> {
+    pub fn add_todo(&self, item: AddItemRequest, interactive: bool) -> Result<()> {
+        // We populate the item with default values so it looks good when presented in
+        // TOML form
+        let mut item = item.clone();
+        item.description = Some(item.description.unwrap_or_default());
+        item.parent = Some(item.parent.unwrap_or_default());
+        item.link = Some(item.link.unwrap_or_default());
+
+        if interactive {
+            let mut file = Builder::new().suffix(".toml").rand_bytes(5).tempfile()?;
+
+            let item_toml = toml::to_string_pretty(&item)?;
+            write!(file, "{}", item_toml)?;
+
+            open_editor(file.path().to_str().unwrap());
+
+            let item_toml = fs::read_to_string(file.path())?;
+            item = toml::from_str(&item_toml)?;
+        }
+
+        // We need to set parent back to none if it is empty
+        if item.parent.is_some() && item.parent.clone().unwrap().is_empty() {
+            item.parent = None;
+        }
+
         let add_endpoint = self.host.clone();
         let client = reqwest::blocking::Client::new();
         client.post(&add_endpoint).json(&item).send()?;
@@ -91,6 +120,50 @@ impl CLI {
     }
 
     pub fn update_todo(&self, id: &str, item: UpdateItemRequest, interactive: bool) -> Result<()> {
+        // Clone the item so we can manipulate it
+        let mut item = item.clone();
+
+        if interactive {
+            let get_endpoint = format!("{}/{}", self.host.clone(), id);
+            let response = reqwest::blocking::get(&get_endpoint)?;
+            if response.status().is_client_error() {
+                return Err(anyhow!("could not find item {}", id));
+            }
+
+            let current_item = response.json::<UpdateItemRequest>().unwrap();
+
+            item.description = Some(current_item.description.unwrap_or_default());
+            item.children = Some(current_item.children.unwrap_or_default());
+            item.completed = Some(current_item.completed.unwrap_or_default());
+            item.link = Some(current_item.link.unwrap_or_default());
+            item.parent = Some(current_item.parent.unwrap_or_default());
+            item.title = Some(current_item.title.unwrap_or_default());
+
+            let mut file = Builder::new().suffix(".toml").rand_bytes(5).tempfile()?;
+
+            let item_toml = toml::to_string_pretty(&item)?;
+
+            // The toml converter does not print fields which are None. Converting those fields
+            // to some for the purposes of looking pretty was not trivial and probably requires
+            // some conversion methods.
+            writeln!(
+                file,
+                "{}",
+                "# Fields: title, description, children, completed, parent, link\n"
+            )?;
+            write!(file, "{}", item_toml)?;
+
+            open_editor(file.path().to_str().unwrap());
+
+            let item_toml = fs::read_to_string(file.path())?;
+            item = toml::from_str(&item_toml)?;
+        }
+
+        // We need to set parent back to none if it is empty
+        if item.parent.is_some() && item.parent.clone().unwrap().is_empty() {
+            item.parent = None;
+        }
+
         let update_endpoint = format!("{}/{}", self.host.clone(), id);
         let client = reqwest::blocking::Client::new();
         client.put(&update_endpoint).json(&item).send()?;
@@ -165,36 +238,33 @@ impl<'a> TreeBuilder<'a> {
     }
 }
 
-// fn create_tmp_file() {
-//     let mut file = Builder::new()
-//         .suffix(".toml")
-//         .rand_bytes(5)
-//         .tempfile()
-//         .expect();
-// }
+fn get_editor_path() -> String {
+    if let Ok(path) = env::var(VISUAL_VAR) {
+        return path;
+    }
 
-// fn get_editor_path() -> String {
-//     if let Ok(path) = env::var(SOME_ENV_HERE_VISUAL) {
-//         return path;
-//     }
+    if let Ok(path) = env::var(EDITOR_VAR) {
+        return path;
+    }
 
-//     if let Ok(path) = env::var(Some_ENV_vARHERE) {
-//         return path;
-//     }
+    let path =
+        which::which(DEFAULT_EDITOR).expect("vi not installed; could not open a default editor");
 
-//     let path = which::which(default_EDITOR).expect("");
+    path.as_path().display().to_string()
+}
 
-//     path.as_path().display().to_string()
-// }
+fn open_editor(filename: &str) {
+    let path = get_editor_path();
 
-// fn open_editor(filename: &str) {
-//     let path = get_editor_path();
-//     let mut path: Vec<&str> = path.split(char::is_whitespace).collect();
-//     path.push(filename);
-//     let path = path.as_slice();
+    // break the path apart so we can append the filename
+    // appending the filename to most editors will open that file
+    let mut path: Vec<&str> = path.split(char::is_whitespace).collect();
+    path.push(filename);
+    let path = path.as_slice();
 
-//     let mut command = Command::new(path[0]);
-//     command.args(&paths[1..]);
+    // reconstruct the path array into the command
+    let mut command = Command::new(path[0]);
+    command.args(&path[1..]);
 
-//     let output = command.output().expect("");
-// }
+    command.output().expect("could not open editor");
+}

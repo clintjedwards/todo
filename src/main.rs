@@ -1,5 +1,5 @@
 use anyhow::Result;
-use models::{Item, UpdateItemRequest};
+use models::{AddItemRequest, UpdateItemRequest};
 use slog::o;
 use slog::Drain;
 use structopt::StructOpt;
@@ -22,7 +22,7 @@ enum Opt {
         description: Option<String>,
 
         /// Which todo item (by id) should this be a child of.
-        #[structopt(short, long, name = "ID")]
+        #[structopt(short, long, value_name = "item_id")]
         parent: Option<String>,
 
         /// URL to 3rd party application where todo might be tracked.
@@ -47,7 +47,7 @@ enum Opt {
         description: Option<String>,
 
         /// Which todo item (by id) should this be a child of.
-        #[structopt(short, long, name = "ID")]
+        #[structopt(short, long, value_name = "item_id")]
         parent: Option<String>,
 
         /// URL to 3rd party application where todo might be tracked.
@@ -55,11 +55,11 @@ enum Opt {
         link: Option<String>,
 
         /// Which todo items (by id) should this be a parent of; comma delimited.
-        #[structopt(short, long)]
+        #[structopt(short, long, value_name = "item_id")]
         children: Option<Vec<String>>,
 
         /// Mark a todo item as done.
-        #[structopt(long = "complete")]
+        #[structopt(long = "complete", value_name = "true|false")]
         completed: Option<bool>,
 
         // Use a text editor
@@ -103,7 +103,7 @@ async fn main() -> Result<()> {
             link,
             interactive,
         } => cli.add_todo(
-            Item {
+            AddItemRequest {
                 title,
                 description,
                 parent,

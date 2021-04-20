@@ -40,12 +40,20 @@ impl Item {
         string_builder.push(format!(" {}", self.title));
 
         match &self.link {
-            Some(link) => string_builder.push(format!(" {} {}", "::".green(), link.yellow())),
+            Some(link) => {
+                if !link.is_empty() {
+                    string_builder.push(format!(" {} {}", "::".green(), link.yellow()))
+                }
+            }
             None => {}
         }
 
         match &self.description {
-            Some(desc) => string_builder.push(format!(" \n\t      {}", desc)),
+            Some(desc) => {
+                if !desc.is_empty() {
+                    string_builder.push(format!(" \n\t      {}", desc))
+                }
+            }
             None => {}
         }
 
