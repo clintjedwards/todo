@@ -3,7 +3,7 @@ use super::models::{AddItemRequest, Item, Items, UpdateItemRequest};
 use anyhow::{anyhow, Result};
 use ptree;
 use reqwest;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::io::Write;
@@ -208,14 +208,14 @@ impl<'a> CLI {
 }
 
 // Given any node in our tree, return the root node
-fn get_root_node(item: &Item, item_map: &HashMap<String, Item>) -> Item {
+fn get_root_node(item: &Item, item_map: &BTreeMap<String, Item>) -> Item {
     match get_parent_node(&item, &item_map) {
         Some(next_item) => get_root_node(&next_item, item_map),
         None => item.clone(),
     }
 }
 
-fn get_parent_node(item: &Item, item_map: &HashMap<String, Item>) -> Option<Item> {
+fn get_parent_node(item: &Item, item_map: &BTreeMap<String, Item>) -> Option<Item> {
     if item.parent.is_none() {
         return None;
     }
@@ -227,7 +227,7 @@ fn get_parent_node(item: &Item, item_map: &HashMap<String, Item>) -> Option<Item
 }
 
 struct TreeBuilder<'a> {
-    items_map: &'a HashMap<String, Item>,
+    items_map: &'a BTreeMap<String, Item>,
     visited: HashSet<String>,
     tree: ptree::TreeBuilder,
 }

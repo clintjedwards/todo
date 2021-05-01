@@ -21,7 +21,7 @@ pub fn new(path: &str) -> Storage {
 }
 
 impl Storage {
-    // get_all_items returns a unpaginated hashmap of all todo items
+    // get_all_items returns a unpaginated btreemap of all todo items
     pub fn get_all_items(&self) -> Result<Items> {
         let items_iter = self.db.iter();
         let mut items: Items = Default::default();

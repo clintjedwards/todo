@@ -70,7 +70,7 @@ fn get_all_items() {
     let expected_item = DB.get_item("1").unwrap().unwrap();
 
     let items = DB.get_all_items().unwrap();
-    let mut expected_map = std::collections::HashMap::new();
+    let mut expected_map = std::collections::BTreeMap::new();
     expected_map.insert(expected_item.id.clone(), expected_item);
     let expected_items = Items {
         items: expected_map,
