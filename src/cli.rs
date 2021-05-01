@@ -31,7 +31,7 @@ pub fn new() -> CLI {
     CLI { host: config.host }
 }
 
-impl CLI {
+impl<'a> CLI {
     pub fn list_todos(&self, include_completed: bool) -> Result<()> {
         let list_endpoint = self.host.clone();
         let response = reqwest::blocking::get(&list_endpoint)?
@@ -119,6 +119,33 @@ impl CLI {
         Ok(())
     }
 
+    // clean_up_todos removes all todo items which don't belong to an unresolved todo.
+    pub fn clean_up_todos(&self) -> Result<()> {
+        let client = reqwest::blocking::Client::new();
+
+        let list_endpoint = self.host.clone();
+        let response = reqwest::blocking::get(&list_endpoint)?
+            .json::<Items>()
+            .unwrap();
+
+        for (id, item) in response.items.clone() {
+            let remove_endpoint = format!("{}/{}", self.host.clone(), id);
+
+            if !item.completed {
+                continue;
+            }
+
+            let node = get_root_node(&item, &response.items);
+            if node.completed {
+                client.delete(&remove_endpoint).send()?;
+            }
+
+            continue;
+        }
+
+        Ok(())
+    }
+
     pub fn update_todo(&self, id: &str, item: UpdateItemRequest, interactive: bool) -> Result<()> {
         // Clone the item so we can manipulate it
         let mut item = item.clone();
@@ -180,6 +207,25 @@ impl CLI {
     }
 }
 
+// Given any node in our tree, return the root node
+fn get_root_node(item: &Item, item_map: &HashMap<String, Item>) -> Item {
+    match get_parent_node(&item, &item_map) {
+        Some(next_item) => get_root_node(&next_item, item_map),
+        None => item.clone(),
+    }
+}
+
+fn get_parent_node(item: &Item, item_map: &HashMap<String, Item>) -> Option<Item> {
+    if item.parent.is_none() {
+        return None;
+    }
+
+    match item_map.get(&item.parent.clone().unwrap()) {
+        Some(parent) => Some(parent.clone()),
+        None => None,
+    }
+}
+
 struct TreeBuilder<'a> {
     items_map: &'a HashMap<String, Item>,
     visited: HashSet<String>,
@@ -225,13 +271,14 @@ impl<'a> TreeBuilder<'a> {
 
         if let Some(children) = &item.children {
             for child_id in children {
-                let child = &self.items_map[child_id];
-                if !include_completed {
-                    if child.completed {
-                        continue;
+                if let Some(child) = &self.items_map.get(child_id) {
+                    if !include_completed {
+                        if child.completed {
+                            continue;
+                        }
                     }
+                    self.add_to_tree(&child, include_completed)
                 }
-                self.add_to_tree(&child, include_completed)
             }
         }
         self.tree.end_child();

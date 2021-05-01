@@ -73,6 +73,9 @@ enum Opt {
     /// Remove an item from the todo list.
     Remove { id: String },
 
+    /// Remove all fully completed items
+    Cleanup {},
+
     /// Toggle the completeness of a task.
     Complete { id: String },
 
@@ -116,6 +119,7 @@ async fn main() -> Result<()> {
         Opt::Get { id } => cli.get_todo(&id),
         Opt::List { show_completed } => cli.list_todos(show_completed),
         Opt::Remove { id } => cli.remove_todo(&id),
+        Opt::Cleanup {} => cli.clean_up_todos(),
         Opt::Server { address } => {
             let api = api::new();
             return Ok(api.run_server(&address).await?);
