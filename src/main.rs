@@ -1,3 +1,4 @@
+use crate::tui::TUI;
 use anyhow::Result;
 use models::{AddItemRequest, UpdateItemRequest};
 use slog::o;
@@ -9,10 +10,12 @@ mod cli;
 mod config;
 mod models;
 mod storage;
+mod tui;
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "todo")]
 enum Opt {
+    Tui {},
     /// Add an item to the todo list.
     Add {
         title: String,
@@ -68,16 +71,22 @@ enum Opt {
     },
 
     /// Get an item by ID.
-    Get { id: String },
+    Get {
+        id: String,
+    },
 
     /// Remove an item from the todo list.
-    Remove { id: String },
+    Remove {
+        id: String,
+    },
 
     /// Remove all fully completed items
     Cleanup {},
 
     /// Toggle the completeness of a task.
-    Complete { id: String },
+    Complete {
+        id: String,
+    },
 
     /// List all outstanding todo items.
     List {
@@ -99,6 +108,10 @@ async fn main() -> Result<()> {
     let cli = cli::new();
 
     match Opt::from_args() {
+        Opt::Tui {} => {
+            let tui = tui::new();
+            tui.start()
+        }
         Opt::Add {
             title,
             description,
