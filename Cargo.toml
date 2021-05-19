@@ -42,5 +42,4 @@ colored = "2"
 tempfile = "3.2"
 toml = "0.5"
 which = "4.1"
-tui = "0.15"
-termion = "1.5"
+

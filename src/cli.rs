@@ -3,7 +3,7 @@ use super::models::{AddItemRequest, Item, Items, UpdateItemRequest};
 use anyhow::{anyhow, Result};
 use ptree;
 use reqwest;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::io::Write;
