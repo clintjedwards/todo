@@ -20,10 +20,12 @@ fn test_find_list_difference() {
     let test_list1 = vec_of_strings!("1", "2", "3", "4");
     let test_list2 = vec_of_strings!("1", "3");
 
-    let mut returned_list = find_list_difference(&test_list1, &test_list2);
-    let mut expected_list = vec_of_strings!("2", "4");
+    let mut returned_list = find_list_difference(test_list1, test_list2);
+    let expected_list = vec_of_strings!("2", "4");
 
-    assert_eq!(returned_list.sort(), expected_list.sort())
+    returned_list.sort();
+
+    assert_eq!(returned_list, expected_list)
 }
 
 #[test]
@@ -31,13 +33,16 @@ fn test_find_list_updates() {
     let current_list = vec_of_strings!("1", "2", "3", "4");
     let update_list = vec_of_strings!("1", "3", "5", "6");
 
-    let (mut list_removals, mut list_additions) = find_list_updates(&current_list, &update_list);
+    let (mut list_removals, mut list_additions) = find_list_updates(current_list, update_list);
 
-    let mut expected_additions = vec_of_strings!("5", "6");
-    let mut expected_removals = vec_of_strings!("2", "4");
+    let expected_additions = vec_of_strings!("5", "6");
+    let expected_removals = vec_of_strings!("2", "4");
 
-    assert_eq!(expected_additions.sort(), list_additions.sort());
-    assert_eq!(expected_removals.sort(), list_removals.sort());
+    list_additions.sort();
+    list_removals.sort();
+
+    assert_eq!(expected_additions, list_additions);
+    assert_eq!(expected_removals, list_removals);
 }
 
 #[test]

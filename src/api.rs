@@ -2,7 +2,6 @@ use super::config;
 use super::models;
 use super::storage;
 use slog_scope::{error, info};
-use tide;
 use tide::prelude::*;
 use tide::{Request, Response, StatusCode};
 

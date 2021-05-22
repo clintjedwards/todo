@@ -1,6 +1,5 @@
 use super::models::{Item, Items};
 use anyhow::{anyhow, Context, Result};
-use sled;
 use std::collections::HashSet;
 use std::time::SystemTime;
 
@@ -83,10 +82,10 @@ impl Storage {
         });
 
         match transaction_result {
-            Ok(result) => Ok(result),
+            Ok(()) => Ok(()),
             Err(e) => Err(anyhow!(
                 "could not complete add item {}; failed transaction: {}",
-                item.id.clone(),
+                item.id,
                 e.to_string()
             )),
         }
@@ -144,7 +143,7 @@ impl Storage {
             };
 
             let (removed_children, added_children) =
-                find_list_updates(&old_list_children, &new_list_children);
+                find_list_updates(old_list_children, new_list_children);
 
             for child_id in added_children {
                 let result = link_parent_to_child(tx_db, &child_id, &item.id.clone());
@@ -168,7 +167,7 @@ impl Storage {
 
             let mut item = item.clone();
             item.id = old_item.id.clone();
-            item.added = old_item.added.clone();
+            item.added = old_item.added;
             item.modified = get_current_epoch_time();
 
             let raw_item: Vec<u8> = match bincode::serialize(&item) {
@@ -176,17 +175,17 @@ impl Storage {
                 Err(e) => return sled::transaction::abort(anyhow!(e)),
             };
 
-            let item_id: &str = &item.id.clone();
+            let item_id: &str = &item.id;
             tx_db.insert(item_id, raw_item)?;
 
             Ok(())
         });
 
         match transaction_result {
-            Ok(result) => Ok(result),
+            Ok(()) => Ok(()),
             Err(e) => Err(anyhow!(
                 "could not complete add item {}; failed transaction: {}",
-                item.id.clone(),
+                item.id,
                 e.to_string()
             )),
         }
@@ -216,7 +215,7 @@ fn link_parent_to_child(
     let raw_child = db.get(child_id)?.unwrap();
     let mut child: Item = bincode::deserialize(&raw_child.to_vec())?;
 
-    child.parent = Some(parent_id.clone().to_string());
+    child.parent = Some(parent_id.to_string());
     child.modified = get_current_epoch_time();
 
     let raw_child: Vec<u8> = bincode::serialize(&child)
@@ -250,14 +249,14 @@ fn link_child_to_parent(
 
     match parent.children.clone() {
         Some(mut children) => {
-            if children.contains(&child_id.clone().to_string()) {
+            if children.contains(&child_id.to_string()) {
                 return Ok(());
             }
-            children.push(child_id.clone().to_string());
+            children.push(child_id.to_string());
             parent.children = Some(children);
         }
         None => {
-            parent.children = Some(vec![child_id.clone().to_string()]);
+            parent.children = Some(vec![child_id.to_string()]);
         }
     }
 
@@ -266,7 +265,7 @@ fn link_child_to_parent(
     let raw_parent: Vec<u8> = bincode::serialize(&parent)
         .with_context(|| format!("Failed to encode item {}", parent_id))?;
 
-    let parent_id: &str = &parent_id.clone();
+    let parent_id: &str = &parent_id;
     db.insert(parent_id, raw_parent)
         .with_context(|| format!("Failed to update item {}", parent_id))?;
 
@@ -295,7 +294,7 @@ fn unlink_child_from_parent(
     let raw_parent: Vec<u8> = bincode::serialize(&parent)
         .with_context(|| format!("Failed to encode item {}", parent_id))?;
 
-    let parent_id: &str = &parent_id.clone();
+    let parent_id: &str = &parent_id;
     db.insert(parent_id, raw_parent)
         .with_context(|| format!("Failed to update item {}", parent_id))?;
 
@@ -311,7 +310,7 @@ fn unlink_parent_from_child(
     let mut child: Item = bincode::deserialize(&raw_child.to_vec())?;
 
     if child.parent.is_some() {
-        unlink_child_from_parent(db, &child.id.clone(), &child.parent.unwrap().clone())?;
+        unlink_child_from_parent(db, &child.id, &child.parent.unwrap())?;
     }
     child.parent = None;
     child.modified = get_current_epoch_time();
@@ -319,14 +318,14 @@ fn unlink_parent_from_child(
     let raw_child: Vec<u8> = bincode::serialize(&child)
         .with_context(|| format!("Failed to encode item {}", child_id))?;
 
-    let child_id: &str = &child_id.clone();
+    let child_id: &str = &child_id;
     db.insert(child_id, raw_child)
         .with_context(|| format!("Failed to update item {}", child_id))?;
 
     Ok(())
 }
 
-fn find_list_difference(list1: &Vec<String>, list2: &Vec<String>) -> Vec<String> {
+fn find_list_difference(list1: Vec<String>, list2: Vec<String>) -> Vec<String> {
     let list1: HashSet<_> = list1.iter().cloned().collect();
     let list2: HashSet<_> = list2.iter().cloned().collect();
 
@@ -334,10 +333,10 @@ fn find_list_difference(list1: &Vec<String>, list2: &Vec<String>) -> Vec<String>
     diff
 }
 
-fn find_list_updates(old_list: &Vec<String>, new_list: &Vec<String>) -> (Vec<String>, Vec<String>) {
-    let removals = find_list_difference(old_list, new_list);
+fn find_list_updates(old_list: Vec<String>, new_list: Vec<String>) -> (Vec<String>, Vec<String>) {
+    let removals = find_list_difference(old_list.clone(), new_list.clone());
     let additions = find_list_difference(new_list, old_list);
-    return (removals, additions);
+    (removals, additions)
 }
 
 fn get_current_epoch_time() -> u64 {

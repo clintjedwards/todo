@@ -1,19 +1,16 @@
 use super::config;
 use super::models::{AddItemRequest, Item, Items, UpdateItemRequest};
 use anyhow::{anyhow, Result};
-use ptree;
-use reqwest;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::env;
 use std::fs;
 use std::io::Write;
 use std::process::Command;
 use tempfile::Builder;
-use which;
 
-const VISUAL_VAR: &'static str = "VISUAL";
-const EDITOR_VAR: &'static str = "EDITOR";
-const DEFAULT_EDITOR: &'static str = "vi";
+const VISUAL_VAR: &str = "VISUAL";
+const EDITOR_VAR: &str = "EDITOR";
+const DEFAULT_EDITOR: &str = "vi";
 
 pub struct CLI {
     host: String,
@@ -53,7 +50,7 @@ impl<'a> CLI {
     pub fn add_todo(&self, item: AddItemRequest, interactive: bool) -> Result<()> {
         // We populate the item with default values so it looks good when presented in
         // TOML form
-        let mut item = item.clone();
+        let mut item = item;
         item.description = Some(item.description.unwrap_or_default());
         item.parent = Some(item.parent.unwrap_or_default());
         item.link = Some(item.link.unwrap_or_default());
@@ -105,7 +102,7 @@ impl<'a> CLI {
 
         let old_item = response.json::<Item>().unwrap();
 
-        let mut updated_item = old_item.clone();
+        let mut updated_item = old_item;
         if updated_item.completed {
             updated_item.completed = false;
         } else {
@@ -148,7 +145,7 @@ impl<'a> CLI {
 
     pub fn update_todo(&self, id: &str, item: UpdateItemRequest, interactive: bool) -> Result<()> {
         // Clone the item so we can manipulate it
-        let mut item = item.clone();
+        let mut item = item;
 
         if interactive {
             let get_endpoint = format!("{}/{}", self.host.clone(), id);
@@ -175,7 +172,6 @@ impl<'a> CLI {
             // some conversion methods.
             writeln!(
                 file,
-                "{}",
                 "# Fields: title, description, children, completed, parent, link\n"
             )?;
             write!(file, "{}", item_toml)?;
@@ -216,9 +212,7 @@ fn get_root_node(item: &Item, item_map: &BTreeMap<String, Item>) -> Item {
 }
 
 fn get_parent_node(item: &Item, item_map: &BTreeMap<String, Item>) -> Option<Item> {
-    if item.parent.is_none() {
-        return None;
-    }
+    item.parent.as_ref()?;
 
     match item_map.get(&item.parent.clone().unwrap()) {
         Some(parent) => Some(parent.clone()),
@@ -244,10 +238,8 @@ impl<'a> TreeBuilder<'a> {
         //TODO(clintjedwards): make this list sortable by different filters
         //TODO(clintjedwards): auto-sort completed at the end of the list
         for item in self.items_map.values() {
-            if !include_completed {
-                if item.completed {
-                    continue;
-                }
+            if !include_completed && item.completed {
+                continue;
             }
             match item.parent {
                 None => self.add_to_tree(&item, include_completed),
@@ -272,10 +264,8 @@ impl<'a> TreeBuilder<'a> {
         if let Some(children) = &item.children {
             for child_id in children {
                 if let Some(child) = &self.items_map.get(child_id) {
-                    if !include_completed {
-                        if child.completed {
-                            continue;
-                        }
+                    if !include_completed && child.completed {
+                        continue;
                     }
                     self.add_to_tree(&child, include_completed)
                 }

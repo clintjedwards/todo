@@ -86,6 +86,11 @@ enum Opt {
         show_completed: bool,
     },
 
+    Web {
+        #[structopt(default_value = "localhost:8081")]
+        address: String,
+    },
+
     /// Start the todo web service.
     Server {
         #[structopt(default_value = "localhost:8080")]
@@ -111,7 +116,6 @@ async fn main() -> Result<()> {
                 description,
                 parent,
                 link,
-                ..Default::default()
             },
             interactive,
         ),
@@ -120,6 +124,7 @@ async fn main() -> Result<()> {
         Opt::List { show_completed } => cli.list_todos(show_completed),
         Opt::Remove { id } => cli.remove_todo(&id),
         Opt::Cleanup {} => cli.clean_up_todos(),
+        Opt::Web { address: _ } => unimplemented!(),
         Opt::Server { address } => {
             let api = api::new();
             return Ok(api.run_server(&address).await?);
@@ -154,7 +159,5 @@ fn init_logging() -> slog_scope::GlobalLoggerGuard {
     let root_logger = slog_async::Async::new(root_logger).build().fuse();
     let log = slog::Logger::root(root_logger, o!());
 
-    let guard = slog_scope::set_global_logger(log);
-
-    guard
+    slog_scope::set_global_logger(log)
 }
