@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "github.com/clintjedwards/gofer/proto";
+
+message Namespace {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int64 created = 4;
+  int64 modified = 5;
+}
