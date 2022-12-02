@@ -6,4 +6,29 @@ option go_package = "github.com/clintjedwards/todo/proto";
 
 import "todo_transport.proto";
 
-service Gofer {}
+service Todo {
+  ////////////// System RPCs //////////////
+  //
+  // Service RPCs exist to help with management of the Todo service. They
+  // usually perform admin type interactions with the service as a whole and
+  // provide ways for admins to quickly repair Todo broken states without
+  // having to stop the entire service.
+  rpc GetSystemInfo(GetSystemInfoRequest) returns (GetSystemInfoResponse);
+
+  ////////////// Task RPCs //////////////
+
+  // ListTasks returns all registered tasks.
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+
+  // CreateTask creates a new task.
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+
+  // GetTask returns a single task by id.
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+
+  // UpdateTask updates the details of a particular task by id.
+  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse);
+
+  // DeleteTask removes a task by id.
+  rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse);
+}

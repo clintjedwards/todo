@@ -36,5 +36,5 @@ func humanizeVersion(version string) string {
 	if !err {
 		return ""
 	}
-	return fmt.Sprintf("gofer %s [%s]\n", semver, hash)
+	return fmt.Sprintf("todo %s [%s]\n", semver, hash)
 }

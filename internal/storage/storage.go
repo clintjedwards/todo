@@ -1,4 +1,4 @@
-// Package storage contains the data storage interface in which Gofer stores all internal data.
+// Package storage contains the data storage interface in which Todo stores all internal data.
 package storage
 
 import (

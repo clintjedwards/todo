@@ -8,6 +8,7 @@ import (
 
 	qb "github.com/Masterminds/squirrel"
 	"github.com/clintjedwards/todo/internal/models"
+	"github.com/clintjedwards/todo/proto"
 )
 
 type Task struct {
@@ -18,6 +19,18 @@ type Task struct {
 	Created     int64
 	Modified    int64
 	Parent      string
+}
+
+func (t *Task) ToProto() *proto.Task {
+	return &proto.Task{
+		Id:          t.ID,
+		Title:       t.Title,
+		Description: t.Description,
+		State:       proto.Task_TaskState(proto.Task_TaskState_value[string(t.State)]),
+		Created:     t.Created,
+		Modified:    t.Modified,
+		Parent:      t.Parent,
+	}
 }
 
 type UpdatableTaskFields struct {

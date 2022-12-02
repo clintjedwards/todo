@@ -2,12 +2,19 @@ syntax = "proto3";
 
 package proto;
 
-option go_package = "github.com/clintjedwards/gofer/proto";
+option go_package = "github.com/clintjedwards/todo/proto";
 
-message Namespace {
+message Task {
   string id = 1;
-  string name = 2;
+  string title = 2;
   string description = 3;
-  int64 created = 4;
-  int64 modified = 5;
+  enum TaskState {
+    TASK_STATE_UNKNOWN = 0;
+    UNRESOLVED = 1;
+    COMPLETED = 2;
+  }
+  TaskState state = 4;
+  int64 created = 5;
+  int64 modified = 6;
+  string parent = 7;
 }
