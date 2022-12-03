@@ -51,8 +51,7 @@ func NewTask(title, description, parent string) *Task {
 
 // generateRandString generates a variable length string; can be used for ids
 func generateRandString(length int) []byte {
-	const charset = "abcdefghijklmnopqrstuvwxyz" +
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	const charset = "abcdefghijklmnopqrstuvwxyz" + "0123456789"
 
 	seededRand := rand.New(
 		rand.NewSource(time.Now().UnixNano()))

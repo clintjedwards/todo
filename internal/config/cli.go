@@ -11,6 +11,7 @@ import (
 type CLI struct {
 	Detail  bool   `hcl:"detail,optional"`
 	Host    string `hcl:"host,optional"`
+	Format  string `hcl:"format,optional"`
 	NoColor bool   `split_words:"true" hcl:"no_color,optional"`
 	Token   string `hcl:"token,optional"`
 }
@@ -19,7 +20,8 @@ type CLI struct {
 // settings.
 func DefaultCLIConfig() *CLI {
 	return &CLI{
-		Host: "localhost:8080",
+		Host:   "localhost:8080",
+		Format: "pretty",
 	}
 }
 

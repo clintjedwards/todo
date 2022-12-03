@@ -246,27 +246,3 @@ func (api *API) generateTLSConfig(certPath, keyPath string) (*tls.Config, error)
 
 	return tlsConfig, nil
 }
-
-// getTLSFiles returns certificates suppled from file paths. If server is in devmode and no cert is provided
-// it instead loads certificates from embedded files for ease of development.
-func (api *API) getTLSFromFile(certPath, keyPath string) (cert, key []byte, err error) {
-	if api.config.DevMode && certPath == "" {
-		return devtlscert, devtlskey, nil
-	}
-
-	if certPath == "" || keyPath == "" {
-		return nil, nil, fmt.Errorf("TLS cert and key cannot be empty")
-	}
-
-	cert, err = os.ReadFile(certPath)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	key, err = os.ReadFile(keyPath)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return cert, key, nil
-}

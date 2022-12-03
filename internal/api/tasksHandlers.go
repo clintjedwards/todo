@@ -49,6 +49,10 @@ func (api *API) ListTasks(ctx context.Context, request *proto.ListTasksRequest) 
 }
 
 func (api *API) CreateTask(ctx context.Context, request *proto.CreateTaskRequest) (*proto.CreateTaskResponse, error) {
+	if request.Title == "" {
+		return nil, status.Error(codes.FailedPrecondition, "title required")
+	}
+
 	newTask := models.NewTask(request.Title, request.Description, request.Parent)
 
 	err := api.db.InsertTask(api.db, taskModelToStorage(newTask))
@@ -62,7 +66,7 @@ func (api *API) CreateTask(ctx context.Context, request *proto.CreateTaskRequest
 			status.Error(codes.Internal, "could not insert task")
 	}
 
-	return &proto.CreateTaskResponse{}, nil
+	return &proto.CreateTaskResponse{Id: newTask.ID}, nil
 }
 
 func (api *API) UpdateTask(ctx context.Context, request *proto.UpdateTaskRequest) (*proto.UpdateTaskResponse, error) {
