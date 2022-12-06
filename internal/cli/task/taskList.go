@@ -8,6 +8,7 @@ import (
 
 	"github.com/clintjedwards/todo/internal/cli/cl"
 	"github.com/clintjedwards/todo/proto"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -109,7 +110,14 @@ func toTaskTree(tasks []*proto.Task) (tree map[string]taskNode, keys []string) {
 }
 
 func stringifyTask(task *proto.Task) string {
-	return fmt.Sprintf("[%s] %s", task.Id, task.Title)
+	taskStr := fmt.Sprintf("[%s] %s", color.MagentaString(task.Id), color.BlueString(task.Title))
+
+	faint := color.New(color.Faint).SprintfFunc()
+	if task.State == proto.Task_COMPLETED {
+		taskStr = faint("%s", taskStr)
+	}
+
+	return taskStr
 }
 
 func stringifyTasks(tasks []*proto.Task) string {

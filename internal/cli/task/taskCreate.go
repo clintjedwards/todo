@@ -6,6 +6,7 @@ import (
 
 	"github.com/clintjedwards/todo/internal/cli/cl"
 	"github.com/clintjedwards/todo/proto"
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +65,7 @@ func taskCreate(cmd *cobra.Command, args []string) error {
 		cl.State.Fmt.Finish()
 		return err
 	}
-	cl.State.Fmt.PrintSuccess(fmt.Sprintf("Created task: [%s] %q", resp.Id, title))
+	cl.State.Fmt.PrintSuccess(fmt.Sprintf("Created task: [%s] %s", color.MagentaString(resp.Id), "\""+color.BlueString(title)+"\""))
 	cl.State.Fmt.Finish()
 	return nil
 }

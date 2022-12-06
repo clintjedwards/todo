@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/Masterminds/squirrel v1.5.3
 	github.com/clintjedwards/polyfmt v0.4.0
+	github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4
 	github.com/fatih/color v1.13.0
 	github.com/google/go-cmp v0.5.9
 	github.com/gorilla/handlers v1.5.1
@@ -17,6 +18,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/cobra v1.6.1
+	golang.org/x/text v0.4.0
 	google.golang.org/grpc v1.51.0
 	google.golang.org/protobuf v1.28.1
 )
@@ -43,7 +45,6 @@ require (
 	github.com/zclconf/go-cty v1.12.1 // indirect
 	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
 	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
-	golang.org/x/text v0.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20210126160654-44e461bb6506 // indirect
 	nhooyr.io/websocket v1.8.6 // indirect
 )
