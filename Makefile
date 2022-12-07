@@ -32,7 +32,7 @@ SEMVER = 0.0.0
 VERSION = ${SEMVER}_${GIT_COMMIT}
 
 ## build: run tests and compile application
-build: check-path-included check-semver-included build-protos build-sdk
+build: check-path-included check-semver-included build-protos
 > go test ./... -race
 > go mod tidy
 > export CGO_ENABLED=1

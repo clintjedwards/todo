@@ -154,9 +154,11 @@ func stringifyTasks(tasks []*proto.Task) string {
 		}
 	}
 
-	// Lastly if this is the very last node, go ahead and round the corner off.
-	lastNodePrinted := sb[len(sb)-1]
-	sb[len(sb)-1] = strings.Replace(lastNodePrinted, "├", "└", 1)
+	if len(sb) > 1 {
+		// Lastly if this is the very last node, go ahead and round the corner off.
+		lastNodePrinted := sb[len(sb)-1]
+		sb[len(sb)-1] = strings.Replace(lastNodePrinted, "├", "└", 1)
+	}
 
 	return strings.Join(sb, "")
 }
