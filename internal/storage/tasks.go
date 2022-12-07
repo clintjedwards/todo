@@ -84,6 +84,22 @@ func (db *DB) GetTask(conn Queryable, id string) (Task, error) {
 	return task, nil
 }
 
+func (db *DB) GetTaskChildren(conn Queryable, parentID string) ([]Task, error) {
+	statement := qb.Select("id", "title", "description", "state", "created", "modified", "parent").
+		From("tasks").
+		Where(qb.Eq{"parent": parentID})
+
+	query, args := statement.MustSql()
+
+	tasks := []Task{}
+	err := conn.Select(&tasks, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("database error occurred: %v; %w", err, ErrInternal)
+	}
+
+	return tasks, nil
+}
+
 func (db *DB) InsertTask(conn Queryable, task *Task) error {
 	_, err := conn.NamedExec(`INSERT INTO tasks (id, title, description, state, created, modified, parent) VALUES
 	(:id, :title, :description, :state, :created, :modified, :parent)`, task)

@@ -55,4 +55,7 @@ message UpdateTaskRequest {
 message UpdateTaskResponse {}
 
 message DeleteTaskRequest { string id = 1; }
-message DeleteTaskResponse {}
+message DeleteTaskResponse {
+  // Returns a list of all ids that were deleted.
+  repeated string ids = 1;
+}

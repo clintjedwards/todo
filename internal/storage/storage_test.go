@@ -48,6 +48,16 @@ func TestCRUDTasks(t *testing.T) {
 		Modified:    0,
 	}
 
+	task3 := Task{
+		ID:          "test_task_3",
+		Title:       "Test Task 3",
+		Description: "A child of task 1",
+		State:       "UNRESOLVED",
+		Created:     0,
+		Modified:    0,
+		Parent:      "test_task_1",
+	}
+
 	err = db.InsertTask(db, &task1)
 	if err != nil {
 		t.Fatal(err)
@@ -58,13 +68,27 @@ func TestCRUDTasks(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	err = db.InsertTask(db, &task3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tasks, err := db.ListTasks(db, 0, 0, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(tasks) != 2 {
+	if len(tasks) != 3 {
 		t.Fatalf("incorrect number of tasks retrieved from ListTasks")
+	}
+
+	tasks, err = db.GetTaskChildren(db, "test_task_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(tasks) != 1 {
+		t.Fatalf("incorrect number of tasks retrieved from GetTaskChildren; got %d; want %d", len(tasks), 1)
 	}
 
 	err = db.UpdateTask(db, "test_task_2", UpdatableTaskFields{

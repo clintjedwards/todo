@@ -96,7 +96,8 @@ func (api *API) DeleteTask(ctx context.Context, request *proto.DeleteTaskRequest
 		return nil, status.Error(codes.FailedPrecondition, "id required")
 	}
 
-	err := api.db.DeleteTask(api.db, request.Id)
+	// If you delete a parent task we also need to delete all the children tasks.
+	deletedTasks, err := api.DeleteTaskTree(request.Id)
 	if err != nil {
 		if errors.Is(err, storage.ErrEntityNotFound) {
 			return nil, status.Error(codes.FailedPrecondition, "could not find task")
@@ -104,5 +105,7 @@ func (api *API) DeleteTask(ctx context.Context, request *proto.DeleteTaskRequest
 		return nil, err
 	}
 
-	return &proto.DeleteTaskResponse{}, nil
+	return &proto.DeleteTaskResponse{
+		Ids: deletedTasks,
+	}, nil
 }
