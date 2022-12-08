@@ -11,16 +11,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cmdTaskDelete = &cobra.Command{
+var CmdTaskDelete = &cobra.Command{
 	Use:     "delete <id>",
 	Short:   "Delete a new task",
 	Example: `$ todo task get 62arz`,
 	RunE:    taskDelete,
 	Args:    cobra.ExactArgs(1),
-}
-
-func init() {
-	CmdTask.AddCommand(cmdTaskDelete)
 }
 
 func taskDelete(_ *cobra.Command, args []string) error {

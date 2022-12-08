@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cmdTaskList = &cobra.Command{
+var CmdTaskList = &cobra.Command{
 	Use:     "list",
 	Short:   "List all tasks",
 	Example: `$ todo task list`,
@@ -20,8 +20,7 @@ var cmdTaskList = &cobra.Command{
 }
 
 func init() {
-	cmdTaskList.Flags().BoolP("show-completed", "c", false, "Show tasks which have been completed")
-	CmdTask.AddCommand(cmdTaskList)
+	CmdTaskList.Flags().BoolP("show-completed", "c", false, "Show tasks which have been completed")
 }
 
 func taskList(cmd *cobra.Command, _ []string) error {
@@ -110,12 +109,21 @@ func toTaskTree(tasks []*proto.Task) (tree map[string]taskNode, keys []string) {
 }
 
 func stringifyTask(task *proto.Task) string {
-	taskStr := fmt.Sprintf("[%s] %s", color.MagentaString(task.Id), color.BlueString(task.Title))
-
-	faint := color.New(color.Faint).SprintfFunc()
+	id := color.YellowString(task.Id)
 	if task.State == proto.Task_COMPLETED {
-		taskStr = faint("%s", taskStr)
+		id = color.GreenString(task.Id)
 	}
+
+	faint := color.New(color.Faint).SprintFunc()
+
+	title := color.BlueString(task.Title)
+
+	if task.State == proto.Task_COMPLETED {
+		id = faint(id)
+		title = faint(title)
+	}
+
+	taskStr := fmt.Sprintf("[%s] %s", id, title)
 
 	return taskStr
 }
@@ -155,7 +163,7 @@ func stringifyTasks(tasks []*proto.Task) string {
 	}
 
 	if len(sb) > 1 {
-		// Lastly if this is the very last node, go ahead and round the corner off.
+		// Lastly if this is the very last node round the corner off.
 		lastNodePrinted := sb[len(sb)-1]
 		sb[len(sb)-1] = strings.Replace(lastNodePrinted, "├", "└", 1)
 	}

@@ -79,12 +79,26 @@ func (api *API) UpdateTask(ctx context.Context, request *proto.UpdateTaskRequest
 		Description: &request.Description,
 		Modified:    ptr(time.Now().UnixMilli()),
 		Parent:      &request.Parent,
+		State:       ptr(request.State.String()),
 	})
 	if err != nil {
 		if errors.Is(err, storage.ErrEntityNotFound) {
 			return &proto.UpdateTaskResponse{}, status.Error(codes.FailedPrecondition, "could not find task")
 		}
 		return &proto.UpdateTaskResponse{}, err
+	}
+
+	if request.State == proto.UpdateTaskRequest_COMPLETED {
+		// If we have completed a task we want to also complete all it's children.
+		completedTasks, err := api.CompleteTaskTree(request.Id)
+		if err != nil {
+			if errors.Is(err, storage.ErrEntityNotFound) {
+				return nil, status.Error(codes.FailedPrecondition, "could not find task")
+			}
+			return nil, err
+		}
+
+		log.Debug().Strs("ids", completedTasks).Msg("completed task chain")
 	}
 
 	log.Info().Interface("task", request.Id).Msg("updated task")

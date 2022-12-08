@@ -25,7 +25,12 @@ var RootCmd = &cobra.Command{
 func init() {
 	RootCmd.SetVersionTemplate(humanizeVersion(appVersion))
 	RootCmd.AddCommand(service.CmdService)
-	RootCmd.AddCommand(task.CmdTask)
+	RootCmd.AddCommand(task.CmdTaskCreate)
+	RootCmd.AddCommand(task.CmdTaskDelete)
+	RootCmd.AddCommand(task.CmdTaskGet)
+	RootCmd.AddCommand(task.CmdTaskList)
+	RootCmd.AddCommand(task.CmdTaskComplete)
+	RootCmd.AddCommand(task.CmdTaskUpdate)
 
 	RootCmd.PersistentFlags().String("config", "", "configuration file path")
 	RootCmd.PersistentFlags().Bool("no-color", false, "disable color output")

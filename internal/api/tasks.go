@@ -62,3 +62,47 @@ func (api *API) recursivelyDeleteTasks(tx *sqlx.Tx, id string, deletedTasks *[]s
 
 	return nil
 }
+
+// Complete a parent task and all it's children recursively.
+func (api *API) CompleteTaskTree(id string) ([]string, error) {
+	completedTasks := []string{}
+
+	err := storage.InsideTx(api.db.DB, func(tx *sqlx.Tx) error {
+		err := api.recursivelyCompleteTasks(tx, id, &completedTasks)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return completedTasks, nil
+}
+
+// Completes a parent task and all it's children recursively.
+func (api *API) recursivelyCompleteTasks(tx *sqlx.Tx, id string, completedTasks *[]string) error {
+	err := api.db.UpdateTask(tx, id, storage.UpdatableTaskFields{
+		State: ptr(string(models.TaskStateCompleted)),
+	})
+	if err != nil {
+		return err
+	}
+
+	*completedTasks = append(*completedTasks, id)
+
+	children, err := api.db.GetTaskChildren(tx, id)
+	if err != nil {
+		return err
+	}
+
+	for _, task := range children {
+		err := api.recursivelyCompleteTasks(tx, task.ID, completedTasks)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

@@ -13,16 +13,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cmdTaskGet = &cobra.Command{
+var CmdTaskGet = &cobra.Command{
 	Use:     "get <id>",
 	Short:   "Describe a task",
-	Example: `$ todo task get 62arz`,
+	Example: `$ todo get 62arz`,
 	RunE:    taskGet,
 	Args:    cobra.ExactArgs(1),
-}
-
-func init() {
-	CmdTask.AddCommand(cmdTaskGet)
 }
 
 func taskGet(_ *cobra.Command, args []string) error {

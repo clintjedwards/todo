@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cmdTaskCreate = &cobra.Command{
+var CmdTaskCreate = &cobra.Command{
 	Use:   "create <title>",
 	Short: "Create a new task",
 	Long:  `Create a new task.`,
@@ -22,9 +22,8 @@ $ todo task create "New Task" --description="my new task"
 }
 
 func init() {
-	cmdTaskCreate.Flags().StringP("description", "d", "", "Description about task")
-	cmdTaskCreate.Flags().StringP("parent", "p", "", "Link this task as the child of another task")
-	CmdTask.AddCommand(cmdTaskCreate)
+	CmdTaskCreate.Flags().StringP("description", "d", "", "Description about task")
+	CmdTaskCreate.Flags().StringP("parent", "p", "", "Link this task as the child of another task")
 }
 
 func taskCreate(cmd *cobra.Command, args []string) error {
