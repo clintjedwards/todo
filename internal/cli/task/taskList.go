@@ -141,7 +141,7 @@ func stringifyTasks(tasks []*proto.Task) string {
 	// of the very first node and no others.
 	firstNode := true
 
-	for index, taskID := range keys {
+	for _, taskID := range keys {
 		task := taskTree[taskID].task
 
 		// Skip any child nodes since we want to start building the strings only on the parents.
@@ -149,16 +149,17 @@ func stringifyTasks(tasks []*proto.Task) string {
 			continue
 		}
 
+		// To space out the branches that don't relate to each other
+		// before we start printing a new branch we print a spacer.
+		if !firstNode {
+			sb = append(sb, "┊\n")
+		}
+
 		// Recursively process all children of that top level task.
 		stringifyTaskTreeBranch(&sb, taskTree, taskID, 0, firstNode)
 
 		if firstNode {
 			firstNode = false
-		}
-
-		// When we're done printing a branch get some space in-between before printing another.
-		if index != len(keys)-1 {
-			sb = append(sb, "┊\n")
 		}
 	}
 
