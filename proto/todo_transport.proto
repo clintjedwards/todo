@@ -32,7 +32,7 @@ message ListTasksRequest {
   int64 limit = 2;
   bool exclude_completed = 3;
 }
-message ListTasksResponse { repeated Task tasks = 1; }
+message ListTasksResponse { map<string, Task> tasks = 1; }
 
 message CreateTaskRequest {
   string title = 1;

@@ -38,9 +38,9 @@ func (api *API) ListTasks(ctx context.Context, request *proto.ListTasksRequest) 
 		return &proto.ListTasksResponse{}, status.Error(codes.Internal, "failed to retrieve tasks from database")
 	}
 
-	protoTasks := []*proto.Task{}
+	protoTasks := map[string]*proto.Task{}
 	for _, task := range tasks {
-		protoTasks = append(protoTasks, task.ToProto())
+		protoTasks[task.ID] = task.ToProto()
 	}
 
 	return &proto.ListTasksResponse{

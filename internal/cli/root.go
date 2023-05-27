@@ -7,6 +7,7 @@ import (
 	"github.com/clintjedwards/todo/internal/cli/cl"
 	"github.com/clintjedwards/todo/internal/cli/service"
 	"github.com/clintjedwards/todo/internal/cli/task"
+	"github.com/clintjedwards/todo/internal/cli/task/tui"
 	"github.com/spf13/cobra"
 )
 
@@ -25,10 +26,10 @@ var RootCmd = &cobra.Command{
 func init() {
 	RootCmd.SetVersionTemplate(humanizeVersion(appVersion))
 	RootCmd.AddCommand(service.CmdService)
+	RootCmd.AddCommand(tui.CmdTaskTUI)
 	RootCmd.AddCommand(task.CmdTaskCreate)
 	RootCmd.AddCommand(task.CmdTaskDelete)
 	RootCmd.AddCommand(task.CmdTaskGet)
-	RootCmd.AddCommand(task.CmdTaskList)
 	RootCmd.AddCommand(task.CmdTaskComplete)
 	RootCmd.AddCommand(task.CmdTaskUpdate)
 
