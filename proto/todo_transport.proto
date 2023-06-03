@@ -59,3 +59,43 @@ message DeleteTaskResponse {
   // Returns a list of all ids that were deleted.
   repeated string ids = 1;
 }
+
+////////////// Scheduled Task Models //////////////
+
+message GetScheduledTaskRequest {
+    string id = 1; // The unique id for a particular task
+  }
+  message GetScheduledTaskResponse { ScheduledTask scheduled_task = 1; }
+
+  message ListScheduledTasksRequest {
+    // offset is a pagination parameter that defines where to start when counting
+    // the list of pipelines to return.
+    int64 offset = 1;
+
+    // limit is a pagination parameter that defines how many pipelines to return
+    // per result.
+    int64 limit = 2;
+  }
+  message ListScheduledTasksResponse { repeated ScheduledTask scheduled_tasks = 1; }
+
+  message CreateScheduledTaskRequest {
+    string title = 1;
+    string description = 2;
+    string parent = 3;
+    string expression = 4;
+  }
+  message CreateScheduledTaskResponse { string id = 1; }
+
+  message UpdateScheduledTaskRequest {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    string parent = 4;
+    string expression = 5;
+  }
+  message UpdateScheduledTaskResponse {}
+
+  message DeleteScheduledTaskRequest { string id = 1; }
+  message DeleteScheduledTaskResponse {
+    string id = 1;
+  }

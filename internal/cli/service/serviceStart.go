@@ -2,6 +2,7 @@ package service
 
 import (
 	"os"
+	"strings"
 
 	"github.com/clintjedwards/todo/internal/app"
 	"github.com/clintjedwards/todo/internal/cli/cl"
@@ -18,11 +19,17 @@ var cmdServiceStart = &cobra.Command{
 	Long: `Start the Todo GRPC/HTTP combined server.
 
 Todo runs as a GRPC backend combined with GRPC-WEB/HTTP. Running this command attempts to start the long
-running service. This command will block and only gracefully stop on SIGINT or SIGTERM signals`,
+running service. This command will block and only gracefully stop on SIGINT or SIGTERM signals
+
+### List of Environment Variables
+
+` + strings.Join(config.GetAPIEnvVars(), "\n"),
 	RunE: serverStart,
 }
 
 func init() {
+	cmdServiceStart.Flags().BoolP("dev-mode", "d", false, "Alters several feature flags such that development is easy. "+
+		"This is not to be used in production and may turn off features that are useful for even development like authentication")
 	CmdService.AddCommand(cmdServiceStart)
 }
 
@@ -30,12 +37,13 @@ func serverStart(cmd *cobra.Command, _ []string) error {
 	cl.State.Fmt.Finish()
 
 	configPath, _ := cmd.Flags().GetString("config")
-	conf, err := config.InitAPIConfig(configPath)
+	devMode, _ := cmd.Flags().GetBool("dev-mode")
+	conf, err := config.InitAPIConfig(configPath, true, true, devMode)
 	if err != nil {
 		log.Fatal().Err(err).Msg("error in config initialization")
 	}
 
-	setupLogging(conf.LogLevel, conf.DevMode)
+	setupLogging(conf.LogLevel, conf.Development.PrettyLogging)
 	app.StartServices(conf)
 
 	return nil

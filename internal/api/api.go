@@ -18,7 +18,7 @@ import (
 	"github.com/clintjedwards/todo/internal/config"
 	"github.com/clintjedwards/todo/internal/storage"
 	proto "github.com/clintjedwards/todo/proto"
-	"github.com/gorilla/handlers"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/gorilla/mux"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
@@ -60,6 +60,11 @@ func NewAPI(config *config.API, storage storage.DB) (*API, error) {
 	newAPI := &API{
 		config: config,
 		db:     storage,
+	}
+
+	err := newAPI.restoreReoccurringTasks()
+	if err != nil {
+		return nil, err
 	}
 
 	return newAPI, nil
@@ -106,6 +111,26 @@ func (api *API) StartAPIService() {
 	log.Info().Msg("grpc server exited gracefully")
 }
 
+// The logging middleware has to be run before the final call to return the request.
+// This is because we wrap the responseWriter to gain information from it after it
+// has been written to.
+// To speed this process up we call Serve as soon as possible and log afterwards.
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		next.ServeHTTP(ww, r)
+
+		log.Debug().Str("method", r.Method).
+			Stringer("url", r.URL).
+			Int("status_code", ww.Status()).
+			Int("response_size_bytes", ww.BytesWritten()).
+			Dur("elapsed_ms", time.Since(start)).
+			Msg("")
+	})
+}
+
 // wrapGRPCServer returns a combined grpc/http (grpc-web compatible) service with all proper settings;
 // Rather than going through the trouble of setting up a separate proxy and extra for the service in order to server http/grpc/grpc-web
 // this keeps things simple by enabling the operator to deploy a single binary and serve them all from one endpoint.
@@ -115,24 +140,18 @@ func wrapGRPCServer(config *config.API, grpcServer *grpc.Server) *http.Server {
 
 	router := mux.NewRouter()
 
-	combinedHandler := http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+	// Define GRPC/HTTP request detection middleware
+	GRPCandHTTPHandler := http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.Header.Get("Content-Type"), "application/grpc") || wrappedGrpc.IsGrpcWebRequest(req) {
 			wrappedGrpc.ServeHTTP(resp, req)
-			return
+		} else {
+			router.ServeHTTP(resp, req)
 		}
-		router.ServeHTTP(resp, req)
 	})
-
-	var modifiedHandler http.Handler
-	if config.DevMode {
-		modifiedHandler = handlers.LoggingHandler(os.Stdout, combinedHandler)
-	} else {
-		modifiedHandler = combinedHandler
-	}
 
 	httpServer := http.Server{
 		Addr:    config.Server.Host,
-		Handler: modifiedHandler,
+		Handler: loggingMiddleware(GRPCandHTTPHandler),
 		// Timeouts set here unfortunately also apply to the backing GRPC server. Because GRPC might have long running calls
 		// we have to set these to 0 or a very high number. This creates an issue where running the frontend in this configuration
 		// could possibly open us up to DOS attacks where the client holds the request open for long periods of time. To mitigate
@@ -223,7 +242,7 @@ func (api *API) generateTLSConfig(certPath, keyPath string) (*tls.Config, error)
 	var serverCert tls.Certificate
 	var err error
 
-	if api.config.DevMode && certPath == "" {
+	if api.config.Development.UseLocalhostTLS && certPath == "" {
 		serverCert, err = tls.X509KeyPair(devtlscert, devtlskey)
 		if err != nil {
 			return nil, err

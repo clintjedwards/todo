@@ -14,8 +14,8 @@ var CmdTaskCreate = &cobra.Command{
 	Use:   "create <title>",
 	Short: "Create a new task",
 	Long:  `Create a new task.`,
-	Example: `$ todo task create "New Task"
-$ todo task create "New Task" --description="my new task"
+	Example: `$ todo create "New Task"
+$ todo create "New Task" --description="my new task"
 `,
 	RunE: taskCreate,
 	Args: cobra.ExactArgs(1),

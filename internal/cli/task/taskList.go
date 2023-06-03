@@ -15,18 +15,18 @@ import (
 var CmdTaskList = &cobra.Command{
 	Use:     "list",
 	Short:   "List all tasks",
-	Example: `$ todo task list`,
+	Example: `$ todo list`,
 	RunE:    taskList,
 }
 
 func init() {
-	CmdTaskList.Flags().BoolP("show-completed", "c", false, "Show tasks which have been completed")
+	CmdTaskList.Flags().BoolP("all", "a", false, "Show normally hidden tasks like those that have been completed")
 }
 
 func taskList(cmd *cobra.Command, _ []string) error {
 	cl.State.Fmt.Print("Collecting Tasks")
 
-	showCompleted, err := cmd.Flags().GetBool("show-completed")
+	all, err := cmd.Flags().GetBool("all")
 	if err != nil {
 		cl.State.Fmt.PrintErr(fmt.Sprintf("could not list tasks: %v", err))
 		cl.State.Fmt.Finish()
@@ -45,7 +45,7 @@ func taskList(cmd *cobra.Command, _ []string) error {
 	resp, err := client.ListTasks(context.Background(), &proto.ListTasksRequest{
 		Offset:           0,
 		Limit:            0,
-		ExcludeCompleted: !showCompleted,
+		ExcludeCompleted: !all,
 	})
 	if err != nil {
 		cl.State.Fmt.PrintErr(fmt.Sprintf("could not list task: %v", err))
@@ -196,7 +196,15 @@ func stringifyTaskTreeBranch(sb *[]string, taskTree map[string]taskNode, id stri
 		return
 	}
 
+	sortedChildren := []string{}
+
 	for childID := range children {
+		sortedChildren = append(sortedChildren, childID)
+	}
+
+	sort.Strings(sortedChildren)
+
+	for _, childID := range sortedChildren {
 		stringifyTaskTreeBranch(sb, taskTree, childID, lvl+1, false)
 	}
 }

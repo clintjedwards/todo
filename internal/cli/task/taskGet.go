@@ -16,7 +16,7 @@ import (
 var CmdTaskGet = &cobra.Command{
 	Use:     "get <id>",
 	Short:   "Describe a task",
-	Example: `$ todo get 62arz`,
+	Example: `$ todo 62arz`,
 	RunE:    taskGet,
 	Args:    cobra.ExactArgs(1),
 }

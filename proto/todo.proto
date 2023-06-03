@@ -31,4 +31,22 @@ service Todo {
 
   // DeleteTask removes a task by id.
   rpc DeleteTask(DeleteTaskRequest) returns (DeleteTaskResponse);
+
+
+  ////////////// Scheduled Task RPCs //////////////
+
+  // ListScheduledTasks returns all registered scheduled tasks.
+  rpc ListScheduledTasks(ListScheduledTasksRequest) returns (ListScheduledTasksResponse);
+
+  // CreateScheduledTask creates a scheduled new task.
+  rpc CreateScheduledTask(CreateScheduledTaskRequest) returns (CreateScheduledTaskResponse);
+
+  // GetScheduledTask returns a single scheduled task by id.
+  rpc GetScheduledTask(GetScheduledTaskRequest) returns (GetScheduledTaskResponse);
+
+  // UpdateScheduledTask updates the details of a particular scheduled task by id.
+  rpc UpdateScheduledTask(UpdateScheduledTaskRequest) returns (UpdateScheduledTaskResponse);
+
+  // DeleteScheduledTask removes a scheduled task by id.
+  rpc DeleteScheduledTask(DeleteScheduledTaskRequest) returns (DeleteScheduledTaskResponse);
 }

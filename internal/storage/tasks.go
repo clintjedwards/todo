@@ -7,18 +7,17 @@ import (
 	"strings"
 
 	qb "github.com/Masterminds/squirrel"
-	"github.com/clintjedwards/todo/internal/models"
 	"github.com/clintjedwards/todo/proto"
 )
 
 type Task struct {
-	ID          string
-	Title       string
-	Description string
-	State       string
-	Created     int64
-	Modified    int64
-	Parent      string
+	ID          string `db:"id"`
+	Title       string `db:"title"`
+	Description string `db:"description"`
+	State       string `db:"state"`
+	Created     int64  `db:"created"`
+	Modified    int64  `db:"modified"`
+	Parent      string `db:"parent"`
 }
 
 func (t *Task) ToProto() *proto.Task {
@@ -52,7 +51,7 @@ func (db *DB) ListTasks(conn Queryable, offset, limit int, excludeCompleted bool
 		Offset(uint64(offset))
 
 	if excludeCompleted {
-		statement = statement.Where(qb.NotEq{"state": models.TaskStateCompleted})
+		statement = statement.Where(qb.NotEq{"state": "COMPLETED"})
 	}
 
 	query, args := statement.MustSql()

@@ -121,3 +121,88 @@ func TestCRUDTasks(t *testing.T) {
 		t.Fatalf("expected error Not Found; found alternate error: %v", err)
 	}
 }
+
+func TestCRUDScheduledTasks(t *testing.T) {
+	path := tempFile()
+	db, err := New(path, 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(path)
+
+	task1 := ScheduledTask{
+		ID:          "test_task_1",
+		Title:       "Test Task 1",
+		Description: "This is a test task.",
+		Expression:  "* * * * *",
+	}
+
+	task2 := ScheduledTask{
+		ID:          "test_task_2",
+		Title:       "Test Task 2",
+		Description: "This is a test task.",
+		Expression:  "* * * * *",
+	}
+
+	task3 := ScheduledTask{
+		ID:          "test_task_3",
+		Title:       "Test Task 3",
+		Description: "A child of task 1",
+		Expression:  "* * * * *",
+		Parent:      "test_task_1",
+	}
+
+	err = db.InsertScheduledTask(db, &task1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.InsertScheduledTask(db, &task2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = db.InsertScheduledTask(db, &task3)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tasks, err := db.ListScheduledTasks(db, 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(tasks) != 3 {
+		t.Fatalf("incorrect number of tasks retrieved from ListTasks")
+	}
+
+	err = db.UpdateScheduledTask(db, "test_task_2", UpdatableScheduledTaskFields{
+		Expression: ptr("test_task_1"),
+		Parent:     ptr("test_task_1"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	task2.Expression = "test_task_1"
+	task2.Parent = "test_task_1"
+
+	retrievedTask2, err := db.GetScheduledTask(db, "test_task_2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if diff := cmp.Diff(task2, retrievedTask2); diff != "" {
+		t.Errorf("unexpected map values (-want +got):\n%s", diff)
+	}
+
+	err = db.DeleteScheduledTask(db, "test_task_2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = db.GetScheduledTask(db, "test_task_2")
+	if !errors.Is(err, ErrEntityNotFound) {
+		t.Fatalf("expected error Not Found; found alternate error: %v", err)
+	}
+}

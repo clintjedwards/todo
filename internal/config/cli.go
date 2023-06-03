@@ -3,17 +3,22 @@ package config
 import (
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 
-	"github.com/hashicorp/hcl/v2/hclsimple"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/fatih/structs"
+	"github.com/knadh/koanf/parsers/hcl"
+	"github.com/knadh/koanf/providers/env"
+	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/v2"
 )
 
 type CLI struct {
-	Detail  bool   `hcl:"detail,optional"`
-	Host    string `hcl:"host,optional"`
-	Format  string `hcl:"format,optional"`
-	NoColor bool   `split_words:"true" hcl:"no_color,optional"`
-	Token   string `hcl:"token,optional"`
+	Detail  bool   `koanf:"detail"`
+	Host    string `koanf:"host" `
+	Format  string `koanf:"format"`
+	NoColor bool   `koanf:"no_color"`
+	Token   string `koanf:"token"`
 }
 
 // DefaultCLIConfig returns a pre-populated configuration struct that is used as the base for super imposing user configuration
@@ -25,58 +30,26 @@ func DefaultCLIConfig() *CLI {
 	}
 }
 
-// FromEnv parses environment variables into the config object based on envconfig name
-func (c *CLI) FromEnv() error {
-	err := envconfig.Process("todo_cli", c)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// FromBytes attempts to parse a given HCL configuration.
-func (c *CLI) FromBytes(content []byte) error {
-	err := hclsimple.Decode("config.hcl", content, nil, c)
-	if err != nil {
-		return err
-	}
-
-	c.convertDurationFromHCL()
-
-	return nil
-}
-
-func (c *CLI) FromFile(path string) error {
-	err := hclsimple.DecodeFile(path, nil, c)
-	if err != nil {
-		return err
-	}
-
-	c.convertDurationFromHCL()
-
-	return nil
-}
-
-// convertDurationFromHCL attempts to move the string value of a duration written in HCL to
-// the real time.Duration type. This is needed due to advanced types like time.Duration being not handled particularly
-// well during HCL parsing: https://github.com/hashicorp/hcl/issues/202
-func (c *CLI) convertDurationFromHCL() {}
-
-// Get the final configuration for the CLI.
-// This involves correctly finding and ordering different possible paths for the configuration file.
+// Get configuration for command line.
+// This involves correctly finding and ordering different possible paths for the configuration file:
 //
-// 1) The function is intended to be called with paths gleaned from the -config flag
-// 2) Then combine that with possible other config locations that the user might store a config file.
-// 3) Then try to see if the user has set an envvar for the config file, which overrides
-// all previous config file paths.
-// 4) Finally, pass back whatever is deemed the final config path from that process.
+//  1. The function is intended to be called with paths gleaned from the -config flag in the cli.
+//  2. If the user does not use the -config path of the path does not exist,
+//     then we default to a few hard coded config path locations.
+//  3. Then try to see if the user has set an envvar for the config file, which overrides
+//     all previous config file paths.
+//  4. Finally, whatever configuration file path is found first is the processed.
 //
-// We then use that path data to find the config file and read it in via HCL parsers. Once that is finished
-// we then take any configuration from the environment and superimpose that on top of the final config struct.
-func InitCLIConfig(flagPath string) (*CLI, error) {
+// Whether or not we use the configuration file we then search the environment for all environment variables:
+//   - Environment variables are loaded after the config file and therefore overwrite any conflicting keys.
+//   - All configuration that goes into a configuration file can also be used as an environment variable.
+func InitCLIConfig(flagPath string, loadDefaults bool) (*CLI, error) {
+	var config *CLI
+
 	// First we initiate the default values for the config.
-	config := DefaultCLIConfig()
+	if loadDefaults {
+		config = DefaultCLIConfig()
+	}
 
 	homeDir, _ := os.UserHomeDir()
 	possibleConfigPaths := []string{
@@ -94,14 +67,25 @@ func InitCLIConfig(flagPath string) (*CLI, error) {
 		path = envPath
 	}
 
+	configParser := koanf.New(".")
+
 	if path != "" {
-		err := config.FromFile(path)
+		err := configParser.Load(file.Provider(path), hcl.Parser(true))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err := config.FromEnv()
+	err := configParser.Load(env.Provider("TODO_CLI_", "__", func(s string) string {
+		newStr := strings.TrimPrefix(s, "TODO_CLI_")
+		newStr = strings.ToLower(newStr)
+		return newStr
+	}), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = configParser.Unmarshal("", &config)
 	if err != nil {
 		return nil, err
 	}
@@ -109,13 +93,8 @@ func InitCLIConfig(flagPath string) (*CLI, error) {
 	return config, nil
 }
 
-func PrintCLIEnvs() error {
-	var config CLI
-	err := envconfig.Usage("todo_cli", &config)
-	if err != nil {
-		return err
-	}
-	fmt.Println("TODO_CLI_CONFIG_PATH")
-
-	return nil
+func GetCLIEnvVars() []string {
+	vars := getEnvVarsFromStruct("TODO_CLI_", structs.Fields(CLI{}))
+	sort.Strings(vars)
+	return vars
 }

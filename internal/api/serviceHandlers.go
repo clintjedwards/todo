@@ -10,9 +10,11 @@ import (
 func (api *API) GetSystemInfo(context context.Context, request *proto.GetSystemInfoRequest) (*proto.GetSystemInfoResponse, error) {
 	version, commit := parseVersion(appVersion)
 
+	devModeEnabled := api.config.Development.PrettyLogging || api.config.Development.UseLocalhostTLS
+
 	return &proto.GetSystemInfoResponse{
 		Commit:         commit,
-		DevModeEnabled: api.config.DevMode,
+		DevModeEnabled: devModeEnabled,
 		Semver:         version,
 	}, nil
 }

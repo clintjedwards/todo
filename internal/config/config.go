@@ -6,22 +6,25 @@
 //
 // All environment variables are prefixed with "TODO". Ex: TODO_DEBUG=true
 //
+// Most envvar configuration abides by common envvar string=string formatting: Ex. `export TODO_DEBUG=true`.
+// Complex envvars might take a json string as value.
+//
+//	Example: export TODO_EXTENSIONS="{"name":"test"},{"name":"test2"}"
+//
 // You can print out a current description of current environment variable configuration by using the cli command:
 //
 //	`todo service printenv`
-//
-// Note: Even though this package uses the envconfig package it is incorrect to use the 'default' struct tags as that
-// will cause incorrect overwriting of user defined configurations.
-//
-// Note: Because of the idiosyncrasies of how hcl conversion works certain advanced types like `time.Duration` need to
-// have a sister variable that we read in through hcl via another type and convert to the actual wanted type.
 package config
 
 import (
 	"errors"
 	"log"
 	"os"
+	"reflect"
+	"strings"
 	"time"
+
+	"github.com/fatih/structs"
 )
 
 func mustParseDuration(duration string) time.Duration {
@@ -53,4 +56,20 @@ func searchFilePaths(paths ...string) string {
 	}
 
 	return ""
+}
+
+func getEnvVarsFromStruct(prefix string, fields []*structs.Field) []string {
+	output := []string{}
+
+	for _, field := range fields {
+		tag := field.Tag("koanf")
+		if field.Kind() == reflect.Pointer {
+			output = append(output, getEnvVarsFromStruct(strings.ToUpper(prefix+tag+"__"), field.Fields())...)
+			continue
+		}
+
+		output = append(output, strings.ToUpper(prefix+tag))
+	}
+
+	return output
 }

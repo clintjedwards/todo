@@ -14,25 +14,38 @@ import (
 var CmdTaskDelete = &cobra.Command{
 	Use:     "delete <id>",
 	Short:   "Delete a new task",
-	Example: `$ todo task get 62arz`,
+	Example: `$ todo delete 62arz`,
 	RunE:    taskDelete,
 	Args:    cobra.ExactArgs(1),
 }
 
-func taskDelete(_ *cobra.Command, args []string) error {
+func init() {
+	CmdTaskDelete.Flags().BoolP("force", "f", false, "Skip confirmation prompt")
+}
+
+func taskDelete(cmd *cobra.Command, args []string) error {
 	id := args[0]
 
+	force, err := cmd.Flags().GetBool("force")
+	if err != nil {
+		cl.State.Fmt.PrintErr(fmt.Sprintf("could not delete tasks: %v", err))
+		cl.State.Fmt.Finish()
+		return err
+	}
+
 	cl.State.Fmt.Print("Deleting Task")
-	cl.State.Fmt.Finish()
+	if !force {
+		cl.State.Fmt.Finish()
 
-	var input string
+		var input string
 
-	for {
-		fmt.Printf("%s\n", color.YellowString("[Caution] Deleting a task will also delete all it's children permanently."))
-		fmt.Print("Please type the ID of the task to confirm: ")
-		fmt.Scanln(&input)
-		if strings.EqualFold(input, id) {
-			break
+		for {
+			fmt.Printf("%s\n", color.YellowString("[Caution] Deleting a task will also delete all it's children permanently."))
+			fmt.Print("Please type the ID of the task to confirm: ")
+			fmt.Scanln(&input)
+			if strings.EqualFold(input, id) {
+				break
+			}
 		}
 	}
 

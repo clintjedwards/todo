@@ -47,11 +47,9 @@ build-protos:
 
 ## run: build application and run server
 run:
-> export TODO_DEBUG=true
-> export TODO_DEVMODE=true
-> export SEMVER=0.0.0
-> go build -race -ldflags $(GO_LDFLAGS) -o /tmp/${APP_NAME}
-> /tmp/${APP_NAME} service start
+> export TODO_LOG_LEVEL=debug
+> go build -ldflags $(GO_LDFLAGS) -o /tmp/${APP_NAME}
+> /tmp/${APP_NAME} service start --dev-mode
 .PHONY: run
 
 ## help: prints this help message

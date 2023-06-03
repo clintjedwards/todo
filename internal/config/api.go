@@ -1,51 +1,69 @@
 package config
 
 import (
-	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
-	"github.com/hashicorp/hcl/v2/hclsimple"
-	"github.com/kelseyhightower/envconfig"
+	"github.com/fatih/structs"
+	"github.com/knadh/koanf/parsers/hcl"
+	"github.com/knadh/koanf/providers/env"
+	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/v2"
 )
 
 type API struct {
-	// DevMode turns on humanized debug messages, extra debug logging for the web server and other
-	// convenient features for development. Usually turned on along side LogLevel=debug.
-	DevMode bool `hcl:"dev_mode,optional"`
-	// Log level affects the entire application's logs including launched triggers.
-	LogLevel string  `split_words:"true" hcl:"log_level,optional"`
-	Server   *Server `hcl:"server,block"`
+	// Log level affects the entire application's logs including launched extensions.
+	LogLevel string `koanf:"log_level"`
+
+	Development *Development `koanf:"development"`
+	Server      *Server      `koanf:"server"`
 }
 
 func DefaultAPIConfig() *API {
 	return &API{
-		DevMode:  false,
-		LogLevel: "debug",
-		Server:   DefaultServerConfig(),
+		LogLevel:    "info",
+		Development: DefaultDevelopmentConfig(),
+		Server:      DefaultServerConfig(),
+	}
+}
+
+type Development struct {
+	PrettyLogging   bool `koanf:"pretty_logging"`
+	UseLocalhostTLS bool `koanf:"use_localhost_tls"`
+}
+
+func DefaultDevelopmentConfig() *Development {
+	return &Development{
+		PrettyLogging:   false,
+		UseLocalhostTLS: false,
+	}
+}
+
+func FullDevelopmentConfig() *Development {
+	return &Development{
+		PrettyLogging:   true,
+		UseLocalhostTLS: true,
 	}
 }
 
 // Server represents lower level HTTP/GRPC server settings.
 type Server struct {
 	// URL for the server to bind to. Ex: localhost:8080
-	Host string `hcl:"host,optional"`
+	Host string `koanf:"host"`
 
 	// How long the GRPC service should wait on in-progress connections before hard closing everything out.
-	ShutdownTimeout time.Duration `split_words:"true"`
-
-	// ShutdownTimeoutHCL is the HCL compatible counter part to ShutdownTimeout. It allows the parsing of a string
-	// to a time.Duration since HCL does not support parsing directly into a time.Duration.
-	ShutdownTimeoutHCL string `ignored:"true" hcl:"shutdown_timeout,optional"`
+	ShutdownTimeout time.Duration `koanf:"shutdown_timeout"`
 
 	// Path to the sqlite database.
-	StoragePath string `split_words:"true" hcl:"storage_path,optional"`
+	StoragePath string `koanf:"storage_path"`
 
 	// The total amount of results the database will attempt to pass back when a limit is not explicitly given.
-	StorageResultsLimit int `split_words:"true" hcl:"storage_results_limit,optional"`
+	StorageResultsLimit int `koanf:"storage_results_limit"`
 
-	TLSCertPath string `split_words:"true" hcl:"tls_cert_path,optional"`
-	TLSKeyPath  string `split_words:"true" hcl:"tls_key_path,optional"`
+	TLSCertPath string `koanf:"tls_cert_path"`
+	TLSKeyPath  string `koanf:"tls_key_path"`
 }
 
 // DefaultServerConfig returns a pre-populated configuration struct that is used as the base for super imposing user configuration
@@ -58,62 +76,30 @@ func DefaultServerConfig() *Server {
 	}
 }
 
-// convertDurationFromHCL attempts to move the string value of a duration written in HCL to
-// the real time.Duration type. This is needed due to advanced types like time.Duration being not handled particularly
-// well during HCL parsing: https://github.com/hashicorp/hcl/issues/202
-func (c *API) convertDurationFromHCL() {
-	if c.Server != nil && c.Server.ShutdownTimeoutHCL != "" {
-		c.Server.ShutdownTimeout = mustParseDuration(c.Server.ShutdownTimeoutHCL)
-	}
-}
-
-// FromEnv parses environment variables into the config object based on envconfig name
-func (c *API) FromEnv() error {
-	err := envconfig.Process("todo", c)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// FromBytes attempts to parse a given HCL configuration.
-func (c *API) FromBytes(content []byte) error {
-	err := hclsimple.Decode("config.hcl", content, nil, c)
-	if err != nil {
-		return err
-	}
-
-	c.convertDurationFromHCL()
-
-	return nil
-}
-
-func (c *API) FromFile(path string) error {
-	err := hclsimple.DecodeFile(path, nil, c)
-	if err != nil {
-		return err
-	}
-
-	c.convertDurationFromHCL()
-
-	return nil
-}
-
 // Get the final configuration for the server.
-// This involves correctly finding and ordering different possible paths for the configuration file.
+// This involves correctly finding and ordering different possible paths for the configuration file:
 //
-// 1) The function is intended to be called with paths gleaned from the -config flag
-// 2) Then combine that with possible other config locations that the user might store a config file.
-// 3) Then try to see if the user has set an envvar for the config file, which overrides
-// all previous config file paths.
-// 4) Finally, pass back whatever is deemed the final config path from that process.
+//  1. The function is intended to be called with paths gleaned from the -config flag in the cli.
+//  2. If the user does not use the -config path of the path does not exist,
+//     then we default to a few hard coded config path locations.
+//  3. Then try to see if the user has set an envvar for the config file, which overrides
+//     all previous config file paths.
+//  4. Finally, whatever configuration file path is found first is the processed.
 //
-// We then use that path data to find the config file and read it in via HCL parsers. Once that is finished
-// we then take any configuration from the environment and superimpose that on top of the final config struct.
-func InitAPIConfig(userDefinedPath string) (*API, error) {
+// Whether or not we use the configuration file we then search the environment for all environment variables:
+//   - Environment variables are loaded after the config file and therefore overwrite any conflicting keys.
+//   - All configuration that goes into a configuration file can also be used as an environment variable.
+func InitAPIConfig(userDefinedPath string, loadDefaults, validate, devMode bool) (*API, error) {
+	var config *API
+
 	// First we initiate the default values for the config.
-	config := DefaultAPIConfig()
+	if loadDefaults {
+		config = DefaultAPIConfig()
+	}
+
+	if devMode {
+		config.Development = FullDevelopmentConfig()
+	}
 
 	possibleConfigPaths := []string{userDefinedPath, "/etc/todo/todo.hcl"}
 
@@ -126,28 +112,51 @@ func InitAPIConfig(userDefinedPath string) (*API, error) {
 		path = envPath
 	}
 
+	configParser := koanf.New(".")
+
 	if path != "" {
-		err := config.FromFile(path)
+		err := configParser.Load(file.Provider(path), hcl.Parser(true))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	err := config.FromEnv()
+	err := configParser.Load(env.Provider("TODO_", "__", func(s string) string {
+		newStr := strings.TrimPrefix(s, "TODO_")
+		newStr = strings.ToLower(newStr)
+		return newStr
+	}), nil)
 	if err != nil {
 		return nil, err
+	}
+
+	err = configParser.Unmarshal("", &config)
+	if err != nil {
+		return nil, err
+	}
+
+	if validate {
+		err = config.validate()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return config, nil
 }
 
-func PrintAPIEnvs() error {
-	var config API
-	err := envconfig.Usage("todo", &config)
-	if err != nil {
-		return err
-	}
-	fmt.Println("TODO_CONFIG_PATH")
-
+func (c *API) validate() error {
 	return nil
+}
+
+func GetAPIEnvVars() []string {
+	api := API{
+		Development: &Development{},
+		Server:      &Server{},
+	}
+	fields := structs.Fields(api)
+
+	vars := getEnvVarsFromStruct("TODO_", fields)
+	sort.Strings(vars)
+	return vars
 }

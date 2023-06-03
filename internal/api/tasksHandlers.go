@@ -55,11 +55,10 @@ func (api *API) CreateTask(ctx context.Context, request *proto.CreateTaskRequest
 
 	newTask := models.NewTask(request.Title, request.Description, request.Parent)
 
-	err := api.db.InsertTask(api.db, taskModelToStorage(newTask))
+	err := api.db.InsertTask(api.db, newTask.ToStorage())
 	if err != nil {
 		if errors.Is(err, storage.ErrEntityExists) {
-			return &proto.CreateTaskResponse{},
-				status.Error(codes.AlreadyExists, "task already exists")
+			return &proto.CreateTaskResponse{}, status.Error(codes.AlreadyExists, "task already exists")
 		}
 
 		return &proto.CreateTaskResponse{},

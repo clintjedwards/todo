@@ -11,8 +11,8 @@ import (
 
 // StartServices initializes all required services.
 func StartServices(config *config.API) {
-	if config.DevMode {
-		log.Warn().Msg("server in development mode; not for use in production")
+	if config.Development.UseLocalhostTLS {
+		log.Warn().Msg("Using Localhost TLS certs due to config setting development.use_localhost_tls; Not for use in production.")
 	}
 
 	newStorage, err := initStorage(config.Server)

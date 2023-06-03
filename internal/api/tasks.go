@@ -1,24 +1,14 @@
 package api
 
 import (
+	"time"
+
+	"github.com/clintjedwards/avail/v2"
 	"github.com/clintjedwards/todo/internal/models"
 	"github.com/clintjedwards/todo/internal/storage"
 	"github.com/jmoiron/sqlx"
 	"github.com/rs/zerolog/log"
 )
-
-// Returns a storage layer model from a domain-layer model.
-func taskModelToStorage(task *models.Task) *storage.Task {
-	return &storage.Task{
-		ID:          task.ID,
-		Title:       task.Title,
-		Description: task.Description,
-		State:       string(task.State),
-		Created:     task.Created,
-		Modified:    task.Modified,
-		Parent:      task.Parent,
-	}
-}
 
 // Deletes a parent task and all it's children recursively.
 func (api *API) DeleteTaskTree(id string) ([]string, error) {
@@ -102,6 +92,41 @@ func (api *API) recursivelyCompleteTasks(tx *sqlx.Tx, id string, completedTasks 
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (api *API) restoreReoccurringTasks() error {
+	scheduledTasks, err := api.db.ListScheduledTasks(api.db, 0, 0)
+	if err != nil {
+		return err
+	}
+
+	for _, task := range scheduledTasks {
+		task := task
+		go func(scheduledTask storage.ScheduledTask) {
+			avail, err := avail.New(task.Expression)
+			if err != nil {
+				log.Error().Err(err).Msg("could not start monitoring for scheduled task")
+				return
+			}
+
+			for {
+				if avail.Able(time.Now()) {
+					newTask := models.NewTask(scheduledTask.Title, scheduledTask.Description, scheduledTask.Parent)
+
+					err := api.db.InsertTask(api.db, newTask.ToStorage())
+					if err != nil {
+						log.Error().Err(err).Msg("could not create task")
+					}
+
+					log.Debug().Str("id", newTask.ID).Str("title", scheduledTask.Title).Msg("scheduled a new task")
+				}
+
+				time.Sleep(time.Minute * 1)
+			}
+		}(task)
 	}
 
 	return nil

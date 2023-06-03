@@ -18,3 +18,11 @@ message Task {
   int64 modified = 6;
   string parent = 7;
 }
+
+message ScheduledTask {
+    string id = 1;
+    string title = 2;
+    string description = 3;
+    string expression = 4;
+    string parent = 5;
+  }
