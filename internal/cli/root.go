@@ -7,6 +7,7 @@ import (
 	"github.com/clintjedwards/todo/internal/cli/cl"
 	"github.com/clintjedwards/todo/internal/cli/service"
 	"github.com/clintjedwards/todo/internal/cli/task"
+	"github.com/clintjedwards/todo/internal/cli/task/scheduled"
 	"github.com/clintjedwards/todo/internal/config"
 	"github.com/spf13/cobra"
 )
@@ -38,6 +39,7 @@ func init() {
 	RootCmd.AddCommand(task.CmdTaskComplete)
 	RootCmd.AddCommand(task.CmdTaskUpdate)
 	RootCmd.AddCommand(task.CmdTaskSchedule)
+	RootCmd.AddCommand(scheduled.CmdScheduled)
 
 	RootCmd.PersistentFlags().String("config", "", "configuration file path")
 	RootCmd.PersistentFlags().Bool("no-color", false, "disable color output")

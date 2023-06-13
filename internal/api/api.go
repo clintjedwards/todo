@@ -46,6 +46,9 @@ type API struct {
 	// using this storage mechanism.
 	db storage.DB
 
+	// A map of all scheduled tasks so we can quickly quit the goroutine when the user requests.e
+	scheduledTasks map[string]context.CancelFunc
+
 	// We opt out of forward compatibility with this embedded interface. This is required by GRPC.
 	//
 	// We don't embed the "proto.UnimplementedTodoServer" as there should never(I assume this will come back to bite me)
@@ -58,8 +61,9 @@ type API struct {
 // NewAPI creates a new instance of the main Todo API service.
 func NewAPI(config *config.API, storage storage.DB) (*API, error) {
 	newAPI := &API{
-		config: config,
-		db:     storage,
+		config:         config,
+		db:             storage,
+		scheduledTasks: map[string]context.CancelFunc{},
 	}
 
 	err := newAPI.restoreReoccurringTasks()

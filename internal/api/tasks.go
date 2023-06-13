@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"time"
 
 	"github.com/clintjedwards/avail/v2"
@@ -105,7 +106,11 @@ func (api *API) restoreReoccurringTasks() error {
 
 	for _, task := range scheduledTasks {
 		task := task
-		go func(scheduledTask storage.ScheduledTask) {
+
+		innerCtx, cancelFunc := context.WithCancel(context.Background())
+		api.scheduledTasks[task.ID] = cancelFunc
+
+		go func(ctx context.Context, scheduledTask storage.ScheduledTask) {
 			avail, err := avail.New(task.Expression)
 			if err != nil {
 				log.Error().Err(err).Msg("could not start monitoring for scheduled task")
@@ -113,20 +118,26 @@ func (api *API) restoreReoccurringTasks() error {
 			}
 
 			for {
-				if avail.Able(time.Now()) {
-					newTask := models.NewTask(scheduledTask.Title, scheduledTask.Description, scheduledTask.Parent)
+				select {
+				case <-ctx.Done():
+					log.Debug().Str("id", scheduledTask.ID).Msg("scheduled task processing cancelled")
+					return
+				default:
+					if avail.Able(time.Now()) {
+						newTask := models.NewTask(scheduledTask.Title, scheduledTask.Description, scheduledTask.Parent)
 
-					err := api.db.InsertTask(api.db, newTask.ToStorage())
-					if err != nil {
-						log.Error().Err(err).Msg("could not create task")
+						err := api.db.InsertTask(api.db, newTask.ToStorage())
+						if err != nil {
+							log.Error().Err(err).Msg("could not create task")
+						}
+
+						log.Debug().Str("id", newTask.ID).Str("title", scheduledTask.Title).Str("scheduled_task_id", scheduledTask.ID).Msg("scheduled a new task")
 					}
 
-					log.Debug().Str("id", newTask.ID).Str("title", scheduledTask.Title).Msg("scheduled a new task")
+					time.Sleep(time.Minute * 1)
 				}
-
-				time.Sleep(time.Minute * 1)
 			}
-		}(task)
+		}(innerCtx, task)
 	}
 
 	return nil

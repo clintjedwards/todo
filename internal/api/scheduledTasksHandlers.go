@@ -59,31 +59,40 @@ func (api *API) CreateScheduledTask(ctx context.Context, request *proto.CreateSc
 	}
 
 	newScheduledTask := models.NewScheduledTask(request.Title, request.Description, request.Parent, request.Expression)
+	// Register it in our in-memory cache
+	innerCtx, cancelFunc := context.WithCancel(context.Background())
+	api.scheduledTasks[newScheduledTask.ID] = cancelFunc
 
 	avail, err := avail.New(request.Expression)
 	if err != nil {
 		return &proto.CreateScheduledTaskResponse{}, status.Errorf(codes.FailedPrecondition, "incorrect expression used; %v", err)
 	}
 
-	go func(scheduledTask models.ScheduledTask) {
+	go func(ctx context.Context, scheduledTask models.ScheduledTask) {
 		// Sleep for a minute first in case the user's time-frame matches exactly the time he created the task.
 		time.Sleep(time.Minute * 1)
 
 		for {
-			if avail.Able(time.Now()) {
-				newTask := models.NewTask(scheduledTask.Title, scheduledTask.Description, scheduledTask.Parent)
+			select {
+			case <-ctx.Done():
+				log.Debug().Str("id", scheduledTask.ID).Msg("scheduled task processing cancelled")
+				return
+			default:
+				if avail.Able(time.Now()) {
+					newTask := models.NewTask(scheduledTask.Title, scheduledTask.Description, scheduledTask.Parent)
 
-				err := api.db.InsertTask(api.db, newTask.ToStorage())
-				if err != nil {
-					log.Error().Err(err).Msg("could not create task")
+					err := api.db.InsertTask(api.db, newTask.ToStorage())
+					if err != nil {
+						log.Error().Err(err).Msg("could not create task")
+					}
+
+					log.Debug().Str("id", newTask.ID).Str("title", scheduledTask.Title).Str("scheduled_task_id", scheduledTask.ID).Msg("scheduled a new task")
 				}
 
-				log.Debug().Str("id", newTask.ID).Str("title", scheduledTask.Title).Msg("scheduled a new task")
+				time.Sleep(time.Minute * 1)
 			}
-
-			time.Sleep(time.Minute * 1)
 		}
-	}(*newScheduledTask)
+	}(innerCtx, *newScheduledTask)
 
 	err = api.db.InsertScheduledTask(api.db, newScheduledTask.ToStorage())
 	if err != nil {
@@ -124,6 +133,13 @@ func (api *API) DeleteScheduledTask(ctx context.Context, request *proto.DeleteSc
 	if request.Id == "" {
 		return nil, status.Error(codes.FailedPrecondition, "id required")
 	}
+
+	cancel, exists := api.scheduledTasks[request.Id]
+	if !exists {
+		return &proto.DeleteScheduledTaskResponse{Id: request.Id}, nil
+	}
+
+	cancel()
 
 	err := api.db.DeleteScheduledTask(api.db, request.Id)
 	if err != nil {
