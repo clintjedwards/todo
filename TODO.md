@@ -1,3 +1,2 @@
 - When you create or update with a parent we should check that that parent exists.
-- Add the ability from the cli to CRUD scheduled tasks
 - Handle what happens when a scheduled task does not have the parent anymore
