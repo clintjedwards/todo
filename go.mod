@@ -1,6 +1,6 @@
 module github.com/clintjedwards/todo
 
-go 1.19
+go 1.24
 
 require (
 	github.com/Masterminds/squirrel v1.5.3
@@ -10,7 +10,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/fatih/structs v1.1.0
 	github.com/go-chi/chi/v5 v5.0.8
-	github.com/google/go-cmp v0.5.9
+	github.com/google/go-cmp v0.6.0
 	github.com/gorilla/mux v1.8.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/hashicorp/hcl/v2 v2.15.0
@@ -24,9 +24,9 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/cobra v1.6.1
-	golang.org/x/text v0.4.0
-	google.golang.org/grpc v1.51.0
-	google.golang.org/protobuf v1.28.1
+	golang.org/x/text v0.22.0
+	google.golang.org/grpc v1.72.0
+	google.golang.org/protobuf v1.36.5
 )
 
 require (
@@ -35,7 +35,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.1.1 // indirect
 	github.com/desertbit/timer v0.0.0-20180107155436-c41aec40b27f // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/klauspost/compress v1.11.7 // indirect
@@ -54,8 +54,8 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/theckman/yacspin v0.13.12 // indirect
 	github.com/zclconf/go-cty v1.12.1 // indirect
-	golang.org/x/net v0.0.0-20220722155237-a158d28d115b // indirect
-	golang.org/x/sys v0.0.0-20220908164124-27713097b956 // indirect
+	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 	google.golang.org/genproto v0.0.0-20210126160654-44e461bb6506 // indirect
 	nhooyr.io/websocket v1.8.6 // indirect
 )
